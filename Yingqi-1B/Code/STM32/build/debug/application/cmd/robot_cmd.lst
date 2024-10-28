@@ -1,0 +1,786 @@
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"robot_cmd.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "application/cmd/robot_cmd.c"
+  20              		.section	.text.EmergencyHandler,"ax",%progbits
+  21              		.align	1
+  22              		.syntax unified
+  23              		.thumb
+  24              		.thumb_func
+  26              	EmergencyHandler:
+  27              	.LFB171:
+   1:application/cmd/robot_cmd.c **** // app
+   2:application/cmd/robot_cmd.c **** #include "robot_def.h"
+   3:application/cmd/robot_cmd.c **** #include "robot_cmd.h"
+   4:application/cmd/robot_cmd.c **** // module
+   5:application/cmd/robot_cmd.c **** #include "remote_control.h"
+   6:application/cmd/robot_cmd.c **** #include  "distance.h"
+   7:application/cmd/robot_cmd.c **** #include "ins_task.h"
+   8:application/cmd/robot_cmd.c **** // #include "master_process.h"--视觉
+   9:application/cmd/robot_cmd.c **** #include "message_center.h"
+  10:application/cmd/robot_cmd.c **** #include "general_def.h"
+  11:application/cmd/robot_cmd.c **** #include "dji_motor.h"
+  12:application/cmd/robot_cmd.c **** // bsp
+  13:application/cmd/robot_cmd.c **** #include "bsp_dwt.h"
+  14:application/cmd/robot_cmd.c **** #include "bsp_log.h"
+  15:application/cmd/robot_cmd.c **** #include "ins_task.h"
+  16:application/cmd/robot_cmd.c **** #ifdef ONE_BOARD
+  17:application/cmd/robot_cmd.c **** static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
+  18:application/cmd/robot_cmd.c **** static Publisher_t *chassis_cmd_pub;   // 底盘控制消息发布者
+  19:application/cmd/robot_cmd.c **** #endif                                 // ONE_BOARD
+  20:application/cmd/robot_cmd.c **** static Chassis_Ctrl_Cmd_s chassis_cmd_send;      // 发送给底盘应用的信息,包括控制信�
+  21:application/cmd/robot_cmd.c **** static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底�
+  22:application/cmd/robot_cmd.c **** 
+  23:application/cmd/robot_cmd.c **** static RC_ctrl_t *rc_data;              // 遥控器数据,初始化时返回
+  24:application/cmd/robot_cmd.c **** static Distance_data *dt_data;
+  25:application/cmd/robot_cmd.c **** 
+  26:application/cmd/robot_cmd.c **** static Publisher_t *paw_cmd_pub;           // 发射控制消息发布者
+  27:application/cmd/robot_cmd.c **** static Subscriber_t *paw_feed_sub;         // 发射反馈信息订阅者
+  28:application/cmd/robot_cmd.c **** static Paw_Ctrl_Cmd_s paw_cmd_send;      // 传递给发射的控制信息
+  29:application/cmd/robot_cmd.c **** static Paw_Upload_Data_s paw_fetch_data; // 从发射获取的反馈信息
+  30:application/cmd/robot_cmd.c **** 
+  31:application/cmd/robot_cmd.c **** static Publisher_t *shoot_cmd_pub;           // 发射控制消息发布者
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 2
+
+
+  32:application/cmd/robot_cmd.c **** static Subscriber_t *shoot_feed_sub;         // 发射反馈信息订阅者
+  33:application/cmd/robot_cmd.c **** static Shoot_Ctrl_Cmd_s shoot_cmd_send;      // 传递给发射的控制信息
+  34:application/cmd/robot_cmd.c **** // static Shoot_Upload_Data_s shoot_fetch_data; // 从发射获取的反馈信息
+  35:application/cmd/robot_cmd.c **** 
+  36:application/cmd/robot_cmd.c **** static Robot_Status_e robot_state; // 机器人整体工作状态
+  37:application/cmd/robot_cmd.c **** 
+  38:application/cmd/robot_cmd.c **** void RobotCMDInit()
+  39:application/cmd/robot_cmd.c **** {
+  40:application/cmd/robot_cmd.c ****     rc_data = RemoteControlInit(&huart3);   // 修改为对应串口,注意如果是自研板dbus�
+  41:application/cmd/robot_cmd.c ****     dt_data = dtInit(&huart1); //获得测距传感器数据
+  42:application/cmd/robot_cmd.c ****     // vision_recv_data = VisionInit(&huart1); // 视觉通信串口
+  43:application/cmd/robot_cmd.c **** 
+  44:application/cmd/robot_cmd.c ****     // gimbal_cmd_pub = PubRegister("gimbal_cmd", sizeof(Gimbal_Ctrl_Cmd_s));
+  45:application/cmd/robot_cmd.c ****     // gimbal_feed_sub = SubRegister("gimbal_feed", sizeof(Gimbal_Upload_Data_s));
+  46:application/cmd/robot_cmd.c ****     paw_cmd_pub = PubRegister("paw_cmd", sizeof(Paw_Ctrl_Cmd_s));
+  47:application/cmd/robot_cmd.c ****     paw_feed_sub = SubRegister("paw_feed", sizeof(Paw_Upload_Data_s));
+  48:application/cmd/robot_cmd.c ****      shoot_cmd_pub = PubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
+  49:application/cmd/robot_cmd.c ****     shoot_feed_sub = SubRegister("shoot_feed", sizeof(Shoot_Upload_Data_s));
+  50:application/cmd/robot_cmd.c ****      
+  51:application/cmd/robot_cmd.c **** 
+  52:application/cmd/robot_cmd.c **** #ifdef ONE_BOARD //  双板兼容
+  53:application/cmd/robot_cmd.c ****     chassis_cmd_pub = PubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
+  54:application/cmd/robot_cmd.c ****     chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
+  55:application/cmd/robot_cmd.c **** #endif // ONE_BOARD
+  56:application/cmd/robot_cmd.c **** #ifdef GIMBAL_BOARD
+  57:application/cmd/robot_cmd.c ****     CANComm_Init_Config_s comm_conf = {
+  58:application/cmd/robot_cmd.c ****         .can_config = {
+  59:application/cmd/robot_cmd.c ****             .can_handle = &hcan1,
+  60:application/cmd/robot_cmd.c ****             .tx_id = 0x312,
+  61:application/cmd/robot_cmd.c ****             .rx_id = 0x311,
+  62:application/cmd/robot_cmd.c ****         },
+  63:application/cmd/robot_cmd.c ****         .recv_data_len = sizeof(Chassis_Upload_Data_s),
+  64:application/cmd/robot_cmd.c ****         .send_data_len = sizeof(Chassis_Ctrl_Cmd_s),
+  65:application/cmd/robot_cmd.c ****     };
+  66:application/cmd/robot_cmd.c ****     cmd_can_comm = CANCommInit(&comm_conf);
+  67:application/cmd/robot_cmd.c **** #endif // GIMBAL_BOARD
+  68:application/cmd/robot_cmd.c ****     // gimbal_cmd_send.pitch = 0;--云台
+  69:application/cmd/robot_cmd.c **** 
+  70:application/cmd/robot_cmd.c ****     robot_state = ROBOT_READY; // 启动时机器人进入工作模式,后续加入所有应用初�
+  71:application/cmd/robot_cmd.c **** }
+  72:application/cmd/robot_cmd.c **** 
+  73:application/cmd/robot_cmd.c **** static void EmergencyHandler()//----设置急停
+  74:application/cmd/robot_cmd.c **** {
+  28              		.loc 1 74 1 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  75:application/cmd/robot_cmd.c ****     // 拨轮的向下拨超过一半进入急停模式.注意向打时下拨轮是正
+  76:application/cmd/robot_cmd.c ****     if (rc_data[TEMP].rc.SE < 0 || robot_state == ROBOT_STOP) // 还需添加重要应用和模块�
+  33              		.loc 1 76 5 view .LVU1
+  34              		.loc 1 76 16 is_stmt 0 view .LVU2
+  35 0000 114B     		ldr	r3, .L5
+  36 0002 1A68     		ldr	r2, [r3]
+  37              		.loc 1 76 25 view .LVU3
+  38 0004 B2F90A30 		ldrsh	r3, [r2, #10]
+  39              		.loc 1 76 8 view .LVU4
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 3
+
+
+  40 0008 002B     		cmp	r3, #0
+  41 000a 02DB     		blt	.L2
+  42              		.loc 1 76 48 discriminator 1 view .LVU5
+  43 000c 0F4B     		ldr	r3, .L5+4
+  44 000e 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+  45              		.loc 1 76 33 discriminator 1 view .LVU6
+  46 0010 53B9     		cbnz	r3, .L3
+  47              	.L2:
+  77:application/cmd/robot_cmd.c ****     {
+  78:application/cmd/robot_cmd.c ****         robot_state = ROBOT_STOP;
+  48              		.loc 1 78 9 is_stmt 1 view .LVU7
+  49              		.loc 1 78 21 is_stmt 0 view .LVU8
+  50 0012 0023     		movs	r3, #0
+  51 0014 0D49     		ldr	r1, .L5+4
+  52 0016 0B70     		strb	r3, [r1]
+  79:application/cmd/robot_cmd.c ****         // gimbal_cmd_send.gimbal_mode = GIMBAL_ZERO_FORCE;
+  80:application/cmd/robot_cmd.c ****         chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
+  53              		.loc 1 80 9 is_stmt 1 view .LVU9
+  54              		.loc 1 80 39 is_stmt 0 view .LVU10
+  55 0018 0D49     		ldr	r1, .L5+8
+  56 001a 0B75     		strb	r3, [r1, #20]
+  81:application/cmd/robot_cmd.c ****         paw_cmd_send.paw_mode = Paw_OFF;
+  57              		.loc 1 81 9 is_stmt 1 view .LVU11
+  58              		.loc 1 81 31 is_stmt 0 view .LVU12
+  59 001c 0D49     		ldr	r1, .L5+12
+  60 001e CB70     		strb	r3, [r1, #3]
+  82:application/cmd/robot_cmd.c ****         shoot_cmd_send.friction_mode = FRICTION_OFF;
+  61              		.loc 1 82 9 is_stmt 1 view .LVU13
+  62              		.loc 1 82 38 is_stmt 0 view .LVU14
+  63 0020 0D49     		ldr	r1, .L5+16
+  64 0022 CB70     		strb	r3, [r1, #3]
+  83:application/cmd/robot_cmd.c ****         shoot_cmd_send.load_mode = LOAD_STOP;
+  65              		.loc 1 83 9 is_stmt 1 view .LVU15
+  66              		.loc 1 83 34 is_stmt 0 view .LVU16
+  67 0024 4B70     		strb	r3, [r1, #1]
+  84:application/cmd/robot_cmd.c ****         shoot_cmd_send.shoot_mode = SHOOT_OFF;
+  68              		.loc 1 84 9 is_stmt 1 view .LVU17
+  69              		.loc 1 84 35 is_stmt 0 view .LVU18
+  70 0026 0B70     		strb	r3, [r1]
+  71              	.L3:
+  85:application/cmd/robot_cmd.c ****          LOGERROR("[CMD] emergency stop!");
+  72              		.loc 1 85 43 is_stmt 1 view .LVU19
+  86:application/cmd/robot_cmd.c ****     }
+  87:application/cmd/robot_cmd.c ****     // 遥控器右侧开关为[上],恢复正常运行
+  88:application/cmd/robot_cmd.c ****     if ( rc_data[TEMP].rc.SE>=0)
+  73              		.loc 1 88 5 view .LVU20
+  74              		.loc 1 88 26 is_stmt 0 view .LVU21
+  75 0028 B2F90A30 		ldrsh	r3, [r2, #10]
+  76              		.loc 1 88 8 view .LVU22
+  77 002c 002B     		cmp	r3, #0
+  78 002e 09DB     		blt	.L1
+  89:application/cmd/robot_cmd.c ****     {   
+  90:application/cmd/robot_cmd.c ****         shoot_cmd_send.friction_mode = FRICTION_ON;
+  79              		.loc 1 90 9 is_stmt 1 view .LVU23
+  80              		.loc 1 90 38 is_stmt 0 view .LVU24
+  81 0030 094A     		ldr	r2, .L5+16
+  82 0032 0123     		movs	r3, #1
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 4
+
+
+  83 0034 D370     		strb	r3, [r2, #3]
+  91:application/cmd/robot_cmd.c ****         shoot_cmd_send.shoot_mode = SHOOT_ON;
+  84              		.loc 1 91 9 is_stmt 1 view .LVU25
+  85              		.loc 1 91 35 is_stmt 0 view .LVU26
+  86 0036 1370     		strb	r3, [r2]
+  92:application/cmd/robot_cmd.c ****         robot_state = ROBOT_READY;
+  87              		.loc 1 92 9 is_stmt 1 view .LVU27
+  88              		.loc 1 92 21 is_stmt 0 view .LVU28
+  89 0038 044A     		ldr	r2, .L5+4
+  90 003a 1370     		strb	r3, [r2]
+  93:application/cmd/robot_cmd.c ****         chassis_cmd_send.chassis_mode = CHASSIS_ROTATE;
+  91              		.loc 1 93 9 is_stmt 1 view .LVU29
+  92              		.loc 1 93 39 is_stmt 0 view .LVU30
+  93 003c 044A     		ldr	r2, .L5+8
+  94 003e 1375     		strb	r3, [r2, #20]
+  94:application/cmd/robot_cmd.c ****         paw_cmd_send.paw_mode = Paw_ON;
+  95              		.loc 1 94 9 is_stmt 1 view .LVU31
+  96              		.loc 1 94 31 is_stmt 0 view .LVU32
+  97 0040 044A     		ldr	r2, .L5+12
+  98 0042 D370     		strb	r3, [r2, #3]
+  95:application/cmd/robot_cmd.c ****          LOGINFO("[CMD] reinstate, robot ready");
+  99              		.loc 1 95 49 is_stmt 1 view .LVU33
+ 100              	.L1:
+  96:application/cmd/robot_cmd.c ****     }
+  97:application/cmd/robot_cmd.c **** }
+ 101              		.loc 1 97 1 is_stmt 0 view .LVU34
+ 102 0044 7047     		bx	lr
+ 103              	.L6:
+ 104 0046 00BF     		.align	2
+ 105              	.L5:
+ 106 0048 00000000 		.word	rc_data
+ 107 004c 00000000 		.word	robot_state
+ 108 0050 00000000 		.word	chassis_cmd_send
+ 109 0054 00000000 		.word	paw_cmd_send
+ 110 0058 00000000 		.word	shoot_cmd_send
+ 111              		.cfi_endproc
+ 112              	.LFE171:
+ 114              		.section	.rodata.RobotCMDInit.str1.4,"aMS",%progbits,1
+ 115              		.align	2
+ 116              	.LC0:
+ 117 0000 7061775F 		.ascii	"paw_cmd\000"
+ 117      636D6400 
+ 118              		.align	2
+ 119              	.LC1:
+ 120 0008 7061775F 		.ascii	"paw_feed\000"
+ 120      66656564 
+ 120      00
+ 121 0011 000000   		.align	2
+ 122              	.LC2:
+ 123 0014 73686F6F 		.ascii	"shoot_cmd\000"
+ 123      745F636D 
+ 123      6400
+ 124 001e 0000     		.align	2
+ 125              	.LC3:
+ 126 0020 73686F6F 		.ascii	"shoot_feed\000"
+ 126      745F6665 
+ 126      656400
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 5
+
+
+ 127 002b 00       		.align	2
+ 128              	.LC4:
+ 129 002c 63686173 		.ascii	"chassis_cmd\000"
+ 129      7369735F 
+ 129      636D6400 
+ 130              		.align	2
+ 131              	.LC5:
+ 132 0038 63686173 		.ascii	"chassis_feed\000"
+ 132      7369735F 
+ 132      66656564 
+ 132      00
+ 133              		.section	.text.RobotCMDInit,"ax",%progbits
+ 134              		.align	1
+ 135              		.global	RobotCMDInit
+ 136              		.syntax unified
+ 137              		.thumb
+ 138              		.thumb_func
+ 140              	RobotCMDInit:
+ 141              	.LFB170:
+  39:application/cmd/robot_cmd.c ****     rc_data = RemoteControlInit(&huart3);   // 修改为对应串口,注意如果是自研板dbus�
+ 142              		.loc 1 39 1 is_stmt 1 view -0
+ 143              		.cfi_startproc
+ 144              		@ args = 0, pretend = 0, frame = 0
+ 145              		@ frame_needed = 0, uses_anonymous_args = 0
+ 146 0000 08B5     		push	{r3, lr}
+ 147              		.cfi_def_cfa_offset 8
+ 148              		.cfi_offset 3, -8
+ 149              		.cfi_offset 14, -4
+  40:application/cmd/robot_cmd.c ****     dt_data = dtInit(&huart1); //获得测距传感器数据
+ 150              		.loc 1 40 5 view .LVU36
+  40:application/cmd/robot_cmd.c ****     dt_data = dtInit(&huart1); //获得测距传感器数据
+ 151              		.loc 1 40 15 is_stmt 0 view .LVU37
+ 152 0002 1948     		ldr	r0, .L9
+ 153 0004 FFF7FEFF 		bl	RemoteControlInit
+ 154              	.LVL0:
+  40:application/cmd/robot_cmd.c ****     dt_data = dtInit(&huart1); //获得测距传感器数据
+ 155              		.loc 1 40 13 discriminator 1 view .LVU38
+ 156 0008 184B     		ldr	r3, .L9+4
+ 157 000a 1860     		str	r0, [r3]
+  41:application/cmd/robot_cmd.c ****     // vision_recv_data = VisionInit(&huart1); // 视觉通信串口
+ 158              		.loc 1 41 5 is_stmt 1 view .LVU39
+  41:application/cmd/robot_cmd.c ****     // vision_recv_data = VisionInit(&huart1); // 视觉通信串口
+ 159              		.loc 1 41 15 is_stmt 0 view .LVU40
+ 160 000c 1848     		ldr	r0, .L9+8
+ 161 000e FFF7FEFF 		bl	dtInit
+ 162              	.LVL1:
+  41:application/cmd/robot_cmd.c ****     // vision_recv_data = VisionInit(&huart1); // 视觉通信串口
+ 163              		.loc 1 41 13 discriminator 1 view .LVU41
+ 164 0012 184B     		ldr	r3, .L9+12
+ 165 0014 1860     		str	r0, [r3]
+  46:application/cmd/robot_cmd.c ****     paw_feed_sub = SubRegister("paw_feed", sizeof(Paw_Upload_Data_s));
+ 166              		.loc 1 46 5 is_stmt 1 view .LVU42
+  46:application/cmd/robot_cmd.c ****     paw_feed_sub = SubRegister("paw_feed", sizeof(Paw_Upload_Data_s));
+ 167              		.loc 1 46 19 is_stmt 0 view .LVU43
+ 168 0016 0C21     		movs	r1, #12
+ 169 0018 1748     		ldr	r0, .L9+16
+ 170 001a FFF7FEFF 		bl	PubRegister
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 6
+
+
+ 171              	.LVL2:
+  46:application/cmd/robot_cmd.c ****     paw_feed_sub = SubRegister("paw_feed", sizeof(Paw_Upload_Data_s));
+ 172              		.loc 1 46 17 discriminator 1 view .LVU44
+ 173 001e 174B     		ldr	r3, .L9+20
+ 174 0020 1860     		str	r0, [r3]
+  47:application/cmd/robot_cmd.c ****      shoot_cmd_pub = PubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
+ 175              		.loc 1 47 5 is_stmt 1 view .LVU45
+  47:application/cmd/robot_cmd.c ****      shoot_cmd_pub = PubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
+ 176              		.loc 1 47 20 is_stmt 0 view .LVU46
+ 177 0022 0021     		movs	r1, #0
+ 178 0024 1648     		ldr	r0, .L9+24
+ 179 0026 FFF7FEFF 		bl	SubRegister
+ 180              	.LVL3:
+  47:application/cmd/robot_cmd.c ****      shoot_cmd_pub = PubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
+ 181              		.loc 1 47 18 discriminator 1 view .LVU47
+ 182 002a 164B     		ldr	r3, .L9+28
+ 183 002c 1860     		str	r0, [r3]
+  48:application/cmd/robot_cmd.c ****     shoot_feed_sub = SubRegister("shoot_feed", sizeof(Shoot_Upload_Data_s));
+ 184              		.loc 1 48 6 is_stmt 1 view .LVU48
+  48:application/cmd/robot_cmd.c ****     shoot_feed_sub = SubRegister("shoot_feed", sizeof(Shoot_Upload_Data_s));
+ 185              		.loc 1 48 22 is_stmt 0 view .LVU49
+ 186 002e 0D21     		movs	r1, #13
+ 187 0030 1548     		ldr	r0, .L9+32
+ 188 0032 FFF7FEFF 		bl	PubRegister
+ 189              	.LVL4:
+  48:application/cmd/robot_cmd.c ****     shoot_feed_sub = SubRegister("shoot_feed", sizeof(Shoot_Upload_Data_s));
+ 190              		.loc 1 48 20 discriminator 1 view .LVU50
+ 191 0036 154B     		ldr	r3, .L9+36
+ 192 0038 1860     		str	r0, [r3]
+  49:application/cmd/robot_cmd.c ****      
+ 193              		.loc 1 49 5 is_stmt 1 view .LVU51
+  49:application/cmd/robot_cmd.c ****      
+ 194              		.loc 1 49 22 is_stmt 0 view .LVU52
+ 195 003a 0021     		movs	r1, #0
+ 196 003c 1448     		ldr	r0, .L9+40
+ 197 003e FFF7FEFF 		bl	SubRegister
+ 198              	.LVL5:
+  49:application/cmd/robot_cmd.c ****      
+ 199              		.loc 1 49 20 discriminator 1 view .LVU53
+ 200 0042 144B     		ldr	r3, .L9+44
+ 201 0044 1860     		str	r0, [r3]
+  53:application/cmd/robot_cmd.c ****     chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
+ 202              		.loc 1 53 5 is_stmt 1 view .LVU54
+  53:application/cmd/robot_cmd.c ****     chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
+ 203              		.loc 1 53 23 is_stmt 0 view .LVU55
+ 204 0046 5521     		movs	r1, #85
+ 205 0048 1348     		ldr	r0, .L9+48
+ 206 004a FFF7FEFF 		bl	PubRegister
+ 207              	.LVL6:
+  53:application/cmd/robot_cmd.c ****     chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
+ 208              		.loc 1 53 21 discriminator 1 view .LVU56
+ 209 004e 134B     		ldr	r3, .L9+52
+ 210 0050 1860     		str	r0, [r3]
+  54:application/cmd/robot_cmd.c **** #endif // ONE_BOARD
+ 211              		.loc 1 54 5 is_stmt 1 view .LVU57
+  54:application/cmd/robot_cmd.c **** #endif // ONE_BOARD
+ 212              		.loc 1 54 24 is_stmt 0 view .LVU58
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 7
+
+
+ 213 0052 0121     		movs	r1, #1
+ 214 0054 1248     		ldr	r0, .L9+56
+ 215 0056 FFF7FEFF 		bl	SubRegister
+ 216              	.LVL7:
+  54:application/cmd/robot_cmd.c **** #endif // ONE_BOARD
+ 217              		.loc 1 54 22 discriminator 1 view .LVU59
+ 218 005a 124B     		ldr	r3, .L9+60
+ 219 005c 1860     		str	r0, [r3]
+  70:application/cmd/robot_cmd.c **** }
+ 220              		.loc 1 70 5 is_stmt 1 view .LVU60
+  70:application/cmd/robot_cmd.c **** }
+ 221              		.loc 1 70 17 is_stmt 0 view .LVU61
+ 222 005e 124B     		ldr	r3, .L9+64
+ 223 0060 0122     		movs	r2, #1
+ 224 0062 1A70     		strb	r2, [r3]
+  71:application/cmd/robot_cmd.c **** 
+ 225              		.loc 1 71 1 view .LVU62
+ 226 0064 08BD     		pop	{r3, pc}
+ 227              	.L10:
+ 228 0066 00BF     		.align	2
+ 229              	.L9:
+ 230 0068 00000000 		.word	huart3
+ 231 006c 00000000 		.word	rc_data
+ 232 0070 00000000 		.word	huart1
+ 233 0074 00000000 		.word	dt_data
+ 234 0078 00000000 		.word	.LC0
+ 235 007c 00000000 		.word	paw_cmd_pub
+ 236 0080 08000000 		.word	.LC1
+ 237 0084 00000000 		.word	paw_feed_sub
+ 238 0088 14000000 		.word	.LC2
+ 239 008c 00000000 		.word	shoot_cmd_pub
+ 240 0090 20000000 		.word	.LC3
+ 241 0094 00000000 		.word	shoot_feed_sub
+ 242 0098 2C000000 		.word	.LC4
+ 243 009c 00000000 		.word	chassis_cmd_pub
+ 244 00a0 38000000 		.word	.LC5
+ 245 00a4 00000000 		.word	chassis_feed_sub
+ 246 00a8 00000000 		.word	robot_state
+ 247              		.cfi_endproc
+ 248              	.LFE170:
+ 250              		.section	.text.RobotCMDTask,"ax",%progbits
+ 251              		.align	1
+ 252              		.global	RobotCMDTask
+ 253              		.syntax unified
+ 254              		.thumb
+ 255              		.thumb_func
+ 257              	RobotCMDTask:
+ 258              	.LFB174:
+  98:application/cmd/robot_cmd.c **** 
+  99:application/cmd/robot_cmd.c **** /**
+ 100:application/cmd/robot_cmd.c ****  * @brief 获得底盘的当前角度和距离
+ 101:application/cmd/robot_cmd.c ****  *
+ 102:application/cmd/robot_cmd.c ****  */
+ 103:application/cmd/robot_cmd.c **** static void CalcOffsetAngleDistance(){
+ 104:application/cmd/robot_cmd.c ****     // chassis_cmd_send.x=(dt_data[TEMP].l2+dt_data[TEMP].r1)/2;
+ 105:application/cmd/robot_cmd.c ****     // chassis_cmd_send.lf0=dt_data[TEMP].lf0;
+ 106:application/cmd/robot_cmd.c ****     // chassis_cmd_send.lf1=dt_data[TEMP].lf1;
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 8
+
+
+ 107:application/cmd/robot_cmd.c ****     // chassis_cmd_send.lf2=dt_data[TEMP].lf2;
+ 108:application/cmd/robot_cmd.c ****     // chassis_cmd_send.rf0=dt_data[TEMP].rf0;
+ 109:application/cmd/robot_cmd.c ****     // chassis_cmd_send.rf1=dt_data[TEMP].rf1;
+ 110:application/cmd/robot_cmd.c ****     // chassis_cmd_send.rf2=dt_data[TEMP].rf2;
+ 111:application/cmd/robot_cmd.c ****     // chassis_cmd_send.lb0=dt_data[TEMP].lb0;
+ 112:application/cmd/robot_cmd.c ****     // chassis_cmd_send.lb1=dt_data[TEMP].lb1;
+ 113:application/cmd/robot_cmd.c ****     // chassis_cmd_send.lb2=dt_data[TEMP].lb2;
+ 114:application/cmd/robot_cmd.c ****     // chassis_cmd_send.rb0=dt_data[TEMP].rb0;
+ 115:application/cmd/robot_cmd.c ****     // chassis_cmd_send.rb1=dt_data[TEMP].rb1;
+ 116:application/cmd/robot_cmd.c ****     // chassis_cmd_send.rb2=dt_data[TEMP].rb2;
+ 117:application/cmd/robot_cmd.c **** 
+ 118:application/cmd/robot_cmd.c **** }
+ 119:application/cmd/robot_cmd.c **** 
+ 120:application/cmd/robot_cmd.c **** 
+ 121:application/cmd/robot_cmd.c **** /**
+ 122:application/cmd/robot_cmd.c ****  * @brief 控制输入为遥控器(调试时)的模式和控制量设置
+ 123:application/cmd/robot_cmd.c ****  *
+ 124:application/cmd/robot_cmd.c ****  */
+ 125:application/cmd/robot_cmd.c **** static void RemoteControlSet()
+ 126:application/cmd/robot_cmd.c **** {
+ 127:application/cmd/robot_cmd.c ****     // 控制底盘和云台运行模式,云台待添加,云台是否始终使用IMU数据?
+ 128:application/cmd/robot_cmd.c ****     // if (rc_data[TEMP].rc.SE>=0) // 右侧开关状态[下],底盘跟随云台
+ 129:application/cmd/robot_cmd.c ****     // {
+ 130:application/cmd/robot_cmd.c ****         
+ 131:application/cmd/robot_cmd.c ****         // gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
+ 132:application/cmd/robot_cmd.c ****     // }
+ 133:application/cmd/robot_cmd.c ****     // else if (switch_is_mid(rc_data[TEMP].rc.switch_right)) // 右侧开关状态[中],底盘和�
+ 134:application/cmd/robot_cmd.c ****     // {
+ 135:application/cmd/robot_cmd.c ****         // chassis_cmd_send.chassis_mode = CHASSIS_NO_FOLLOW;
+ 136:application/cmd/robot_cmd.c ****         // gimbal_cmd_send.gimbal_mode = GIMBAL_FREE_MODE;
+ 137:application/cmd/robot_cmd.c ****     // }
+ 138:application/cmd/robot_cmd.c **** 
+ 139:application/cmd/robot_cmd.c ****     // 云台参数,确定云台控制数据
+ 140:application/cmd/robot_cmd.c ****     // if (switch_is_mid(rc_data[TEMP].rc.switch_left)) // 左侧开关状态为[中],视觉模式
+ 141:application/cmd/robot_cmd.c ****     // {
+ 142:application/cmd/robot_cmd.c ****         // 待添加,视觉会发来和目标的误差,同样将其转化为total angle的增量进
+ 143:application/cmd/robot_cmd.c ****         // ...
+ 144:application/cmd/robot_cmd.c ****     // }
+ 145:application/cmd/robot_cmd.c ****     // // 左侧开关状态为[下],或视觉未识别到目标,纯遥控器拨杆控制
+ 146:application/cmd/robot_cmd.c ****     // if (switch_is_down(rc_data[TEMP].rc.switch_left) || vision_recv_data->target_state == NO_TAR
+ 147:application/cmd/robot_cmd.c ****     // { // 按照摇杆的输出大小进行角度增量,增益系数需调整
+ 148:application/cmd/robot_cmd.c ****     //     gimbal_cmd_send.yaw += 0.005f * (float)rc_data[TEMP].rc.rocker_l_;
+ 149:application/cmd/robot_cmd.c ****     //     gimbal_cmd_send.pitch += 0.001f * (float)rc_data[TEMP].rc.rocker_l1;
+ 150:application/cmd/robot_cmd.c ****     // }
+ 151:application/cmd/robot_cmd.c ****     // paw 0
+ 152:application/cmd/robot_cmd.c ****     // if(rc_data[TEMP].rc.SA<500){
+ 153:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw0location=up;
+ 154:application/cmd/robot_cmd.c ****     // }else
+ 155:application/cmd/robot_cmd.c ****     // if(rc_data[TEMP].rc.SA>1500){
+ 156:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw0location=down;
+ 157:application/cmd/robot_cmd.c ****     // }else{
+ 158:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw0location=stand;
+ 159:application/cmd/robot_cmd.c ****     // } 
+ 160:application/cmd/robot_cmd.c ****     // // paw 1
+ 161:application/cmd/robot_cmd.c ****     // if(rc_data[TEMP].rc.SB<500){
+ 162:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw1location=up;
+ 163:application/cmd/robot_cmd.c ****     // }
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 9
+
+
+ 164:application/cmd/robot_cmd.c ****     // else if
+ 165:application/cmd/robot_cmd.c ****     // (rc_data[TEMP].rc.SB>1500){
+ 166:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw1location=down;
+ 167:application/cmd/robot_cmd.c ****     // }else {
+ 168:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw1location=stand;
+ 169:application/cmd/robot_cmd.c ****     // }
+ 170:application/cmd/robot_cmd.c ****     // // paw 2    
+ 171:application/cmd/robot_cmd.c ****     // if(rc_data[TEMP].rc.SC<500){
+ 172:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw2location=up;
+ 173:application/cmd/robot_cmd.c ****     // }
+ 174:application/cmd/robot_cmd.c ****     // else if
+ 175:application/cmd/robot_cmd.c ****     // (rc_data[TEMP].rc.SC>1500){
+ 176:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw2location=down;
+ 177:application/cmd/robot_cmd.c ****     // }else {
+ 178:application/cmd/robot_cmd.c ****     //     paw_cmd_send.paw2location=stand;
+ 179:application/cmd/robot_cmd.c ****     // }
+ 180:application/cmd/robot_cmd.c **** 
+ 181:application/cmd/robot_cmd.c ****     // if(rc_data[TEMP].rc.SD>600){
+ 182:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.load_mode=LOAD_1_BULLET;
+ 183:application/cmd/robot_cmd.c ****     // }else{
+ 184:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.load_mode=LOAD_STOP;
+ 185:application/cmd/robot_cmd.c ****     // }
+ 186:application/cmd/robot_cmd.c **** 
+ 187:application/cmd/robot_cmd.c **** 
+ 188:application/cmd/robot_cmd.c ****     // // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调�
+ 189:application/cmd/robot_cmd.c ****     // chassis_cmd_send.vx =   (float)rc_data[TEMP].rc.rocker_r_; // _水平方向
+ 190:application/cmd/robot_cmd.c ****     // chassis_cmd_send.vy =  (float)rc_data[TEMP].rc.rocker_r1; // 1数值方向
+ 191:application/cmd/robot_cmd.c ****     //  chassis_cmd_send.wz =   (float)rc_data[TEMP].rc.rocker_l_;
+ 192:application/cmd/robot_cmd.c ****     //   // 旋转方向
+ 193:application/cmd/robot_cmd.c **** 
+ 194:application/cmd/robot_cmd.c ****     // if(rc_data[TEMP].rc.SG>800){
+ 195:application/cmd/robot_cmd.c ****        
+ 196:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.shoot_rate1=60.0f*124;
+ 197:application/cmd/robot_cmd.c ****         
+ 198:application/cmd/robot_cmd.c ****     // }else{
+ 199:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.shoot_rate1=0;
+ 200:application/cmd/robot_cmd.c ****         
+ 201:application/cmd/robot_cmd.c ****     // }
+ 202:application/cmd/robot_cmd.c ****     // if(rc_data[TEMP].rc.SF>800){
+ 203:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.shoot_rate2= -60.0f *924;
+ 204:application/cmd/robot_cmd.c ****     // }else{
+ 205:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.shoot_rate2= 0;
+ 206:application/cmd/robot_cmd.c ****     // }
+ 207:application/cmd/robot_cmd.c ****     // 发射参数
+ 208:application/cmd/robot_cmd.c ****     // if (switch_is_up(rc_data[TEMP].rc.switch_right)) // 右侧开关状态[上],弹舱打开
+ 209:application/cmd/robot_cmd.c ****     //     ;                                            // 弹舱舵机控制,待添加servo_motor�
+ 210:application/cmd/robot_cmd.c ****     // else
+ 211:application/cmd/robot_cmd.c ****     //     ; // 弹舱舵机控制,待添加servo_motor模块,关闭
+ 212:application/cmd/robot_cmd.c **** 
+ 213:application/cmd/robot_cmd.c ****     //摩擦轮控制,拨轮向上打为负,向下为正
+ 214:application/cmd/robot_cmd.c ****     // if (rc_data[TEMP].rc.dial < -100) // 向上超过100,打开摩擦轮
+ 215:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.friction_mode = FRICTION_ON;
+ 216:application/cmd/robot_cmd.c ****     // else
+ 217:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.friction_mode = FRICTION_OFF;
+ 218:application/cmd/robot_cmd.c ****     // // 拨弹控制,遥控器固定为一种拨弹模式,可自行选择
+ 219:application/cmd/robot_cmd.c ****     // if (rc_data[TEMP].rc.dial < -500)
+ 220:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.load_mode = LOAD_BURSTFIRE;
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 10
+
+
+ 221:application/cmd/robot_cmd.c ****     // else
+ 222:application/cmd/robot_cmd.c ****     //     shoot_cmd_send.load_mode = LOAD_STOP;
+ 223:application/cmd/robot_cmd.c ****     // // 射频控制,固定每秒1发,后续可以根据左侧拨轮的值大小切换射频,
+ 224:application/cmd/robot_cmd.c ****     // shoot_cmd_send.shoot_rate = 8;
+ 225:application/cmd/robot_cmd.c **** }
+ 226:application/cmd/robot_cmd.c **** 
+ 227:application/cmd/robot_cmd.c **** /* 机器人核心控制任务,200Hz频率运行(必须高于视觉发送频率) */
+ 228:application/cmd/robot_cmd.c **** void RobotCMDTask()
+ 229:application/cmd/robot_cmd.c **** {
+ 259              		.loc 1 229 1 is_stmt 1 view -0
+ 260              		.cfi_startproc
+ 261              		@ args = 0, pretend = 0, frame = 0
+ 262              		@ frame_needed = 0, uses_anonymous_args = 0
+ 263 0000 08B5     		push	{r3, lr}
+ 264              		.cfi_def_cfa_offset 8
+ 265              		.cfi_offset 3, -8
+ 266              		.cfi_offset 14, -4
+ 230:application/cmd/robot_cmd.c ****     // 从其他应用获取回传数据
+ 231:application/cmd/robot_cmd.c **** #ifdef ONE_BOARD
+ 232:application/cmd/robot_cmd.c ****     SubGetMessage(chassis_feed_sub, (void *)&chassis_fetch_data);
+ 267              		.loc 1 232 5 view .LVU64
+ 268 0002 0E49     		ldr	r1, .L13
+ 269 0004 0E4B     		ldr	r3, .L13+4
+ 270 0006 1868     		ldr	r0, [r3]
+ 271 0008 FFF7FEFF 		bl	SubGetMessage
+ 272              	.LVL8:
+ 233:application/cmd/robot_cmd.c **** #endif // ONE_BOARD
+ 234:application/cmd/robot_cmd.c **** #ifdef GIMBAL_BOARD
+ 235:application/cmd/robot_cmd.c ****     chassis_fetch_data = *(Chassis_Upload_Data_s *)CANCommGet(cmd_can_comm);
+ 236:application/cmd/robot_cmd.c **** #endif // GIMBAL_BOARD
+ 237:application/cmd/robot_cmd.c ****     SubGetMessage(paw_feed_sub, &paw_fetch_data);//---云台和发射
+ 273              		.loc 1 237 5 view .LVU65
+ 274 000c 0D49     		ldr	r1, .L13+8
+ 275 000e 0E4B     		ldr	r3, .L13+12
+ 276 0010 1868     		ldr	r0, [r3]
+ 277 0012 FFF7FEFF 		bl	SubGetMessage
+ 278              	.LVL9:
+ 238:application/cmd/robot_cmd.c ****     // SubGetMessage(gimbal_feed_sub, &gimbal_fetch_data);
+ 239:application/cmd/robot_cmd.c **** 
+ 240:application/cmd/robot_cmd.c ****     // 根据gimbal的反馈值计算云台和底盘正方向的夹角,不需要传参,通过static
+ 241:application/cmd/robot_cmd.c ****         CalcOffsetAngleDistance();
+ 279              		.loc 1 241 9 view .LVU66
+ 242:application/cmd/robot_cmd.c ****     // // 根据遥控器左侧开关,确定当前使用的控制模式为遥控器调试还是键�
+ 243:application/cmd/robot_cmd.c ****     // if (switch_is_down(rc_data[TEMP].rc.switch_left)) // 遥控器左侧开关状态为[下],遥
+ 244:application/cmd/robot_cmd.c ****         RemoteControlSet();
+ 280              		.loc 1 244 9 view .LVU67
+ 245:application/cmd/robot_cmd.c ****     // else if (switch_is_up(rc_data[TEMP].rc.switch_left)) // 遥控器左侧开关状态为[上],
+ 246:application/cmd/robot_cmd.c ****         // MouseKeySet();
+ 247:application/cmd/robot_cmd.c **** 
+ 248:application/cmd/robot_cmd.c ****         EmergencyHandler(); // 处理模块离线和遥控器急停等紧急情况
+ 281              		.loc 1 248 9 view .LVU68
+ 282 0016 FFF7FEFF 		bl	EmergencyHandler
+ 283              	.LVL10:
+ 249:application/cmd/robot_cmd.c **** 
+ 250:application/cmd/robot_cmd.c ****     // 设置视觉发送数据,还需增加加速度和角速度数据
+ 251:application/cmd/robot_cmd.c ****     // VisionSetFlag(chassis_fetch_data.enemy_color,,chassis_fetch_data.bullet_speed)
+ 252:application/cmd/robot_cmd.c **** 
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 11
+
+
+ 253:application/cmd/robot_cmd.c ****     // 推送消息,双板通信,视觉通信等
+ 254:application/cmd/robot_cmd.c ****     // 其他应用所需的控制数据在remotecontrolsetmode和mousekeysetmode中完成设置
+ 255:application/cmd/robot_cmd.c **** #ifdef ONE_BOARD
+ 256:application/cmd/robot_cmd.c ****     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
+ 284              		.loc 1 256 5 view .LVU69
+ 285 001a 0C49     		ldr	r1, .L13+16
+ 286 001c 0C4B     		ldr	r3, .L13+20
+ 287 001e 1868     		ldr	r0, [r3]
+ 288 0020 FFF7FEFF 		bl	PubPushMessage
+ 289              	.LVL11:
+ 257:application/cmd/robot_cmd.c ****     PubPushMessage(paw_cmd_pub, (void *)&paw_cmd_send);
+ 290              		.loc 1 257 5 view .LVU70
+ 291 0024 0B49     		ldr	r1, .L13+24
+ 292 0026 0C4B     		ldr	r3, .L13+28
+ 293 0028 1868     		ldr	r0, [r3]
+ 294 002a FFF7FEFF 		bl	PubPushMessage
+ 295              	.LVL12:
+ 258:application/cmd/robot_cmd.c ****     PubPushMessage(shoot_cmd_pub, (void *)&shoot_cmd_send);
+ 296              		.loc 1 258 5 view .LVU71
+ 297 002e 0B49     		ldr	r1, .L13+32
+ 298 0030 0B4B     		ldr	r3, .L13+36
+ 299 0032 1868     		ldr	r0, [r3]
+ 300 0034 FFF7FEFF 		bl	PubPushMessage
+ 301              	.LVL13:
+ 259:application/cmd/robot_cmd.c **** #endif // ONE_BOARD
+ 260:application/cmd/robot_cmd.c **** #ifdef GIMBAL_BOARD
+ 261:application/cmd/robot_cmd.c ****     CANCommSend(cmd_can_comm, (void *)&chassis_cmd_send);
+ 262:application/cmd/robot_cmd.c **** #endif // GIMBAL_BOARD
+ 263:application/cmd/robot_cmd.c ****     
+ 264:application/cmd/robot_cmd.c ****     // PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);
+ 265:application/cmd/robot_cmd.c ****     // VisionSend(&vision_send_data);
+ 266:application/cmd/robot_cmd.c **** }
+ 302              		.loc 1 266 1 is_stmt 0 view .LVU72
+ 303 0038 08BD     		pop	{r3, pc}
+ 304              	.L14:
+ 305 003a 00BF     		.align	2
+ 306              	.L13:
+ 307 003c 00000000 		.word	chassis_fetch_data
+ 308 0040 00000000 		.word	chassis_feed_sub
+ 309 0044 00000000 		.word	paw_fetch_data
+ 310 0048 00000000 		.word	paw_feed_sub
+ 311 004c 00000000 		.word	chassis_cmd_send
+ 312 0050 00000000 		.word	chassis_cmd_pub
+ 313 0054 00000000 		.word	paw_cmd_send
+ 314 0058 00000000 		.word	paw_cmd_pub
+ 315 005c 00000000 		.word	shoot_cmd_send
+ 316 0060 00000000 		.word	shoot_cmd_pub
+ 317              		.cfi_endproc
+ 318              	.LFE174:
+ 320              		.section	.bss.robot_state,"aw",%nobits
+ 323              	robot_state:
+ 324 0000 00       		.space	1
+ 325              		.section	.bss.shoot_cmd_send,"aw",%nobits
+ 326              		.align	2
+ 329              	shoot_cmd_send:
+ 330 0000 00000000 		.space	13
+ 330      00000000 
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 12
+
+
+ 330      00000000 
+ 330      00
+ 331              		.section	.bss.shoot_feed_sub,"aw",%nobits
+ 332              		.align	2
+ 335              	shoot_feed_sub:
+ 336 0000 00000000 		.space	4
+ 337              		.section	.bss.shoot_cmd_pub,"aw",%nobits
+ 338              		.align	2
+ 341              	shoot_cmd_pub:
+ 342 0000 00000000 		.space	4
+ 343              		.section	.bss.paw_fetch_data,"aw",%nobits
+ 344              		.align	2
+ 347              	paw_fetch_data:
+ 348              		.section	.bss.paw_cmd_send,"aw",%nobits
+ 349              		.align	2
+ 352              	paw_cmd_send:
+ 353 0000 00000000 		.space	12
+ 353      00000000 
+ 353      00000000 
+ 354              		.section	.bss.paw_feed_sub,"aw",%nobits
+ 355              		.align	2
+ 358              	paw_feed_sub:
+ 359 0000 00000000 		.space	4
+ 360              		.section	.bss.paw_cmd_pub,"aw",%nobits
+ 361              		.align	2
+ 364              	paw_cmd_pub:
+ 365 0000 00000000 		.space	4
+ 366              		.section	.bss.dt_data,"aw",%nobits
+ 367              		.align	2
+ 370              	dt_data:
+ 371 0000 00000000 		.space	4
+ 372              		.section	.bss.rc_data,"aw",%nobits
+ 373              		.align	2
+ 376              	rc_data:
+ 377 0000 00000000 		.space	4
+ 378              		.section	.bss.chassis_fetch_data,"aw",%nobits
+ 379              		.align	2
+ 382              	chassis_fetch_data:
+ 383 0000 00       		.space	1
+ 384              		.section	.bss.chassis_cmd_send,"aw",%nobits
+ 385              		.align	2
+ 388              	chassis_cmd_send:
+ 389 0000 00000000 		.space	85
+ 389      00000000 
+ 389      00000000 
+ 389      00000000 
+ 389      00000000 
+ 390              		.section	.bss.chassis_cmd_pub,"aw",%nobits
+ 391              		.align	2
+ 394              	chassis_cmd_pub:
+ 395 0000 00000000 		.space	4
+ 396              		.section	.bss.chassis_feed_sub,"aw",%nobits
+ 397              		.align	2
+ 400              	chassis_feed_sub:
+ 401 0000 00000000 		.space	4
+ 402              		.text
+ 403              	.Letext0:
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 13
+
+
+ 404              		.file 2 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 405              		.file 3 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 406              		.file 4 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h"
+ 407              		.file 5 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h"
+ 408              		.file 6 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h"
+ 409              		.file 7 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h"
+ 410              		.file 8 "application/robot_def.h"
+ 411              		.file 9 "Core/Inc/usart.h"
+ 412              		.file 10 "moudels/remote/remote_control.h"
+ 413              		.file 11 "moudels/distance/distance.h"
+ 414              		.file 12 "moudels/message_center/message_center.h"
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s 			page 14
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 robot_cmd.c
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:21     .text.EmergencyHandler:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:26     .text.EmergencyHandler:00000000 EmergencyHandler
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:106    .text.EmergencyHandler:00000048 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:376    .bss.rc_data:00000000 rc_data
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:323    .bss.robot_state:00000000 robot_state
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:388    .bss.chassis_cmd_send:00000000 chassis_cmd_send
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:352    .bss.paw_cmd_send:00000000 paw_cmd_send
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:329    .bss.shoot_cmd_send:00000000 shoot_cmd_send
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:115    .rodata.RobotCMDInit.str1.4:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:134    .text.RobotCMDInit:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:140    .text.RobotCMDInit:00000000 RobotCMDInit
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:230    .text.RobotCMDInit:00000068 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:370    .bss.dt_data:00000000 dt_data
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:364    .bss.paw_cmd_pub:00000000 paw_cmd_pub
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:358    .bss.paw_feed_sub:00000000 paw_feed_sub
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:341    .bss.shoot_cmd_pub:00000000 shoot_cmd_pub
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:335    .bss.shoot_feed_sub:00000000 shoot_feed_sub
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:394    .bss.chassis_cmd_pub:00000000 chassis_cmd_pub
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:400    .bss.chassis_feed_sub:00000000 chassis_feed_sub
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:251    .text.RobotCMDTask:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:257    .text.RobotCMDTask:00000000 RobotCMDTask
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:307    .text.RobotCMDTask:0000003c $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:382    .bss.chassis_fetch_data:00000000 chassis_fetch_data
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:347    .bss.paw_fetch_data:00000000 paw_fetch_data
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:324    .bss.robot_state:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:326    .bss.shoot_cmd_send:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:332    .bss.shoot_feed_sub:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:338    .bss.shoot_cmd_pub:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:349    .bss.paw_cmd_send:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:355    .bss.paw_feed_sub:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:361    .bss.paw_cmd_pub:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:367    .bss.dt_data:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:373    .bss.rc_data:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:379    .bss.chassis_fetch_data:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:385    .bss.chassis_cmd_send:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:391    .bss.chassis_cmd_pub:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccXbaVLR.s:397    .bss.chassis_feed_sub:00000000 $d
+
+UNDEFINED SYMBOLS
+RemoteControlInit
+dtInit
+PubRegister
+SubRegister
+huart3
+huart1
+SubGetMessage
+PubPushMessage

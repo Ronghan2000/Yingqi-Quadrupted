@@ -1,0 +1,425 @@
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"bsp_delay.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "bsp/bsp_delay/bsp_delay.c"
+  20              		.section	.text.delay_init,"ax",%progbits
+  21              		.align	1
+  22              		.global	delay_init
+  23              		.syntax unified
+  24              		.thumb
+  25              		.thumb_func
+  27              	delay_init:
+  28              	.LFB134:
+   1:bsp/bsp_delay/bsp_delay.c **** #include "bsp_delay.h"
+   2:bsp/bsp_delay/bsp_delay.c **** #include "main.h"
+   3:bsp/bsp_delay/bsp_delay.c **** 
+   4:bsp/bsp_delay/bsp_delay.c **** static uint8_t fac_us = 0;
+   5:bsp/bsp_delay/bsp_delay.c **** static uint32_t fac_ms = 0;
+   6:bsp/bsp_delay/bsp_delay.c **** 
+   7:bsp/bsp_delay/bsp_delay.c **** void delay_init(void)
+   8:bsp/bsp_delay/bsp_delay.c **** {
+  29              		.loc 1 8 1 view -0
+  30              		.cfi_startproc
+  31              		@ args = 0, pretend = 0, frame = 0
+  32              		@ frame_needed = 0, uses_anonymous_args = 0
+  33              		@ link register save eliminated.
+   9:bsp/bsp_delay/bsp_delay.c ****     fac_us = SystemCoreClock / 1000000;
+  34              		.loc 1 9 5 view .LVU1
+  35              		.loc 1 9 30 is_stmt 0 view .LVU2
+  36 0000 074B     		ldr	r3, .L2
+  37 0002 1B68     		ldr	r3, [r3]
+  38 0004 074A     		ldr	r2, .L2+4
+  39 0006 A2FB0312 		umull	r1, r2, r2, r3
+  40 000a 920C     		lsrs	r2, r2, #18
+  41              		.loc 1 9 12 view .LVU3
+  42 000c 0649     		ldr	r1, .L2+8
+  43 000e 0A70     		strb	r2, [r1]
+  10:bsp/bsp_delay/bsp_delay.c ****     fac_ms = SystemCoreClock / 1000;
+  44              		.loc 1 10 5 is_stmt 1 view .LVU4
+  45              		.loc 1 10 30 is_stmt 0 view .LVU5
+  46 0010 064A     		ldr	r2, .L2+12
+  47 0012 A2FB0323 		umull	r2, r3, r2, r3
+  48 0016 9B09     		lsrs	r3, r3, #6
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s 			page 2
+
+
+  49              		.loc 1 10 12 view .LVU6
+  50 0018 054A     		ldr	r2, .L2+16
+  51 001a 1360     		str	r3, [r2]
+  11:bsp/bsp_delay/bsp_delay.c **** 
+  12:bsp/bsp_delay/bsp_delay.c **** }
+  52              		.loc 1 12 1 view .LVU7
+  53 001c 7047     		bx	lr
+  54              	.L3:
+  55 001e 00BF     		.align	2
+  56              	.L2:
+  57 0020 00000000 		.word	SystemCoreClock
+  58 0024 83DE1B43 		.word	1125899907
+  59 0028 00000000 		.word	fac_us
+  60 002c D34D6210 		.word	274877907
+  61 0030 00000000 		.word	fac_ms
+  62              		.cfi_endproc
+  63              	.LFE134:
+  65              		.section	.text.delay_us,"ax",%progbits
+  66              		.align	1
+  67              		.global	delay_us
+  68              		.syntax unified
+  69              		.thumb
+  70              		.thumb_func
+  72              	delay_us:
+  73              	.LVL0:
+  74              	.LFB135:
+  13:bsp/bsp_delay/bsp_delay.c **** 
+  14:bsp/bsp_delay/bsp_delay.c **** void delay_us(uint16_t nus)
+  15:bsp/bsp_delay/bsp_delay.c **** {
+  75              		.loc 1 15 1 is_stmt 1 view -0
+  76              		.cfi_startproc
+  77              		@ args = 0, pretend = 0, frame = 0
+  78              		@ frame_needed = 0, uses_anonymous_args = 0
+  79              		@ link register save eliminated.
+  80              		.loc 1 15 1 is_stmt 0 view .LVU9
+  81 0000 10B4     		push	{r4}
+  82              		.cfi_def_cfa_offset 4
+  83              		.cfi_offset 4, -4
+  16:bsp/bsp_delay/bsp_delay.c ****     uint32_t ticks = 0;
+  84              		.loc 1 16 5 is_stmt 1 view .LVU10
+  85              	.LVL1:
+  17:bsp/bsp_delay/bsp_delay.c ****     uint32_t told = 0;
+  86              		.loc 1 17 5 view .LVU11
+  18:bsp/bsp_delay/bsp_delay.c ****     uint32_t tnow = 0;
+  87              		.loc 1 18 5 view .LVU12
+  19:bsp/bsp_delay/bsp_delay.c ****     uint32_t tcnt = 0;
+  88              		.loc 1 19 5 view .LVU13
+  20:bsp/bsp_delay/bsp_delay.c ****     uint32_t reload = 0;
+  89              		.loc 1 20 5 view .LVU14
+  21:bsp/bsp_delay/bsp_delay.c ****     reload = SysTick->LOAD;
+  90              		.loc 1 21 5 view .LVU15
+  91              		.loc 1 21 12 is_stmt 0 view .LVU16
+  92 0002 4FF0E023 		mov	r3, #-536813568
+  93 0006 5C69     		ldr	r4, [r3, #20]
+  94              	.LVL2:
+  22:bsp/bsp_delay/bsp_delay.c ****     ticks = nus * fac_us;
+  95              		.loc 1 22 5 is_stmt 1 view .LVU17
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s 			page 3
+
+
+  96              		.loc 1 22 17 is_stmt 0 view .LVU18
+  97 0008 0C4A     		ldr	r2, .L11
+  98 000a 92F800C0 		ldrb	ip, [r2]	@ zero_extendqisi2
+  99 000e 00FB0CFC 		mul	ip, r0, ip
+ 100              	.LVL3:
+  23:bsp/bsp_delay/bsp_delay.c ****     told = SysTick->VAL;
+ 101              		.loc 1 23 5 is_stmt 1 view .LVU19
+ 102              		.loc 1 23 10 is_stmt 0 view .LVU20
+ 103 0012 9B69     		ldr	r3, [r3, #24]
+ 104              	.LVL4:
+  19:bsp/bsp_delay/bsp_delay.c ****     uint32_t reload = 0;
+ 105              		.loc 1 19 14 view .LVU21
+ 106 0014 0021     		movs	r1, #0
+ 107 0016 04E0     		b	.L8
+ 108              	.LVL5:
+ 109              	.L6:
+  24:bsp/bsp_delay/bsp_delay.c ****     while (1)
+  25:bsp/bsp_delay/bsp_delay.c ****     {
+  26:bsp/bsp_delay/bsp_delay.c ****         tnow = SysTick->VAL;
+  27:bsp/bsp_delay/bsp_delay.c ****         if (tnow != told)
+  28:bsp/bsp_delay/bsp_delay.c ****         {
+  29:bsp/bsp_delay/bsp_delay.c ****             if (tnow < told)
+  30:bsp/bsp_delay/bsp_delay.c ****             {
+  31:bsp/bsp_delay/bsp_delay.c ****                 tcnt += told - tnow;
+  32:bsp/bsp_delay/bsp_delay.c ****             }
+  33:bsp/bsp_delay/bsp_delay.c ****             else
+  34:bsp/bsp_delay/bsp_delay.c ****             {
+  35:bsp/bsp_delay/bsp_delay.c ****                 tcnt += reload - tnow + told;
+ 110              		.loc 1 35 17 is_stmt 1 view .LVU22
+ 111              		.loc 1 35 32 is_stmt 0 view .LVU23
+ 112 0018 E01A     		subs	r0, r4, r3
+ 113              		.loc 1 35 39 view .LVU24
+ 114 001a 0244     		add	r2, r2, r0
+ 115              	.LVL6:
+ 116              		.loc 1 35 22 view .LVU25
+ 117 001c 1144     		add	r1, r1, r2
+ 118              	.LVL7:
+ 119              	.L7:
+  36:bsp/bsp_delay/bsp_delay.c ****             }
+  37:bsp/bsp_delay/bsp_delay.c ****             told = tnow;
+ 120              		.loc 1 37 13 is_stmt 1 view .LVU26
+  38:bsp/bsp_delay/bsp_delay.c ****             if (tcnt >= ticks)
+ 121              		.loc 1 38 13 view .LVU27
+ 122              		.loc 1 38 16 is_stmt 0 view .LVU28
+ 123 001e 6145     		cmp	r1, ip
+ 124 0020 09D2     		bcs	.L10
+ 125              	.LVL8:
+ 126              	.L8:
+  19:bsp/bsp_delay/bsp_delay.c ****     uint32_t reload = 0;
+ 127              		.loc 1 19 14 view .LVU29
+ 128 0022 1A46     		mov	r2, r3
+ 129              	.LVL9:
+ 130              	.L5:
+  24:bsp/bsp_delay/bsp_delay.c ****     {
+ 131              		.loc 1 24 5 is_stmt 1 view .LVU30
+  26:bsp/bsp_delay/bsp_delay.c ****         if (tnow != told)
+ 132              		.loc 1 26 9 view .LVU31
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s 			page 4
+
+
+  26:bsp/bsp_delay/bsp_delay.c ****         if (tnow != told)
+ 133              		.loc 1 26 14 is_stmt 0 view .LVU32
+ 134 0024 4FF0E023 		mov	r3, #-536813568
+ 135 0028 9B69     		ldr	r3, [r3, #24]
+ 136              	.LVL10:
+  27:bsp/bsp_delay/bsp_delay.c ****         {
+ 137              		.loc 1 27 9 is_stmt 1 view .LVU33
+  27:bsp/bsp_delay/bsp_delay.c ****         {
+ 138              		.loc 1 27 12 is_stmt 0 view .LVU34
+ 139 002a 9A42     		cmp	r2, r3
+ 140 002c FAD0     		beq	.L5
+  29:bsp/bsp_delay/bsp_delay.c ****             {
+ 141              		.loc 1 29 13 is_stmt 1 view .LVU35
+  29:bsp/bsp_delay/bsp_delay.c ****             {
+ 142              		.loc 1 29 16 is_stmt 0 view .LVU36
+ 143 002e F3D9     		bls	.L6
+  31:bsp/bsp_delay/bsp_delay.c ****             }
+ 144              		.loc 1 31 17 is_stmt 1 view .LVU37
+  31:bsp/bsp_delay/bsp_delay.c ****             }
+ 145              		.loc 1 31 30 is_stmt 0 view .LVU38
+ 146 0030 D21A     		subs	r2, r2, r3
+ 147              	.LVL11:
+  31:bsp/bsp_delay/bsp_delay.c ****             }
+ 148              		.loc 1 31 22 view .LVU39
+ 149 0032 1144     		add	r1, r1, r2
+ 150              	.LVL12:
+  31:bsp/bsp_delay/bsp_delay.c ****             }
+ 151              		.loc 1 31 22 view .LVU40
+ 152 0034 F3E7     		b	.L7
+ 153              	.LVL13:
+ 154              	.L10:
+  39:bsp/bsp_delay/bsp_delay.c ****             {
+  40:bsp/bsp_delay/bsp_delay.c ****                 break;
+  41:bsp/bsp_delay/bsp_delay.c ****             }
+  42:bsp/bsp_delay/bsp_delay.c ****         }
+  43:bsp/bsp_delay/bsp_delay.c ****     }
+  44:bsp/bsp_delay/bsp_delay.c **** }
+ 155              		.loc 1 44 1 view .LVU41
+ 156 0036 5DF8044B 		ldr	r4, [sp], #4
+ 157              		.cfi_restore 4
+ 158              		.cfi_def_cfa_offset 0
+ 159              	.LVL14:
+ 160              		.loc 1 44 1 view .LVU42
+ 161 003a 7047     		bx	lr
+ 162              	.L12:
+ 163              		.align	2
+ 164              	.L11:
+ 165 003c 00000000 		.word	fac_us
+ 166              		.cfi_endproc
+ 167              	.LFE135:
+ 169              		.section	.text.delay_ms,"ax",%progbits
+ 170              		.align	1
+ 171              		.global	delay_ms
+ 172              		.syntax unified
+ 173              		.thumb
+ 174              		.thumb_func
+ 176              	delay_ms:
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s 			page 5
+
+
+ 177              	.LVL15:
+ 178              	.LFB136:
+  45:bsp/bsp_delay/bsp_delay.c **** 
+  46:bsp/bsp_delay/bsp_delay.c **** void delay_ms(uint16_t nms)
+  47:bsp/bsp_delay/bsp_delay.c **** {
+ 179              		.loc 1 47 1 is_stmt 1 view -0
+ 180              		.cfi_startproc
+ 181              		@ args = 0, pretend = 0, frame = 0
+ 182              		@ frame_needed = 0, uses_anonymous_args = 0
+ 183              		@ link register save eliminated.
+ 184              		.loc 1 47 1 is_stmt 0 view .LVU44
+ 185 0000 10B4     		push	{r4}
+ 186              		.cfi_def_cfa_offset 4
+ 187              		.cfi_offset 4, -4
+  48:bsp/bsp_delay/bsp_delay.c ****     uint32_t ticks = 0;
+ 188              		.loc 1 48 5 is_stmt 1 view .LVU45
+ 189              	.LVL16:
+  49:bsp/bsp_delay/bsp_delay.c ****     uint32_t told = 0;
+ 190              		.loc 1 49 5 view .LVU46
+  50:bsp/bsp_delay/bsp_delay.c ****     uint32_t tnow = 0;
+ 191              		.loc 1 50 5 view .LVU47
+  51:bsp/bsp_delay/bsp_delay.c ****     uint32_t tcnt = 0;
+ 192              		.loc 1 51 5 view .LVU48
+  52:bsp/bsp_delay/bsp_delay.c ****     uint32_t reload = 0;
+ 193              		.loc 1 52 5 view .LVU49
+  53:bsp/bsp_delay/bsp_delay.c ****     reload = SysTick->LOAD;
+ 194              		.loc 1 53 5 view .LVU50
+ 195              		.loc 1 53 12 is_stmt 0 view .LVU51
+ 196 0002 4FF0E023 		mov	r3, #-536813568
+ 197 0006 5C69     		ldr	r4, [r3, #20]
+ 198              	.LVL17:
+  54:bsp/bsp_delay/bsp_delay.c ****     ticks = nms * fac_ms;
+ 199              		.loc 1 54 5 is_stmt 1 view .LVU52
+ 200              		.loc 1 54 17 is_stmt 0 view .LVU53
+ 201 0008 0C4A     		ldr	r2, .L20
+ 202 000a 1268     		ldr	r2, [r2]
+ 203              		.loc 1 54 11 view .LVU54
+ 204 000c 02FB00FC 		mul	ip, r2, r0
+ 205              	.LVL18:
+  55:bsp/bsp_delay/bsp_delay.c ****     told = SysTick->VAL;
+ 206              		.loc 1 55 5 is_stmt 1 view .LVU55
+ 207              		.loc 1 55 10 is_stmt 0 view .LVU56
+ 208 0010 9B69     		ldr	r3, [r3, #24]
+ 209              	.LVL19:
+  51:bsp/bsp_delay/bsp_delay.c ****     uint32_t reload = 0;
+ 210              		.loc 1 51 14 view .LVU57
+ 211 0012 0021     		movs	r1, #0
+ 212 0014 04E0     		b	.L17
+ 213              	.LVL20:
+ 214              	.L15:
+  56:bsp/bsp_delay/bsp_delay.c ****     while (1)
+  57:bsp/bsp_delay/bsp_delay.c ****     {
+  58:bsp/bsp_delay/bsp_delay.c ****         tnow = SysTick->VAL;
+  59:bsp/bsp_delay/bsp_delay.c ****         if (tnow != told)
+  60:bsp/bsp_delay/bsp_delay.c ****         {
+  61:bsp/bsp_delay/bsp_delay.c ****             if (tnow < told)
+  62:bsp/bsp_delay/bsp_delay.c ****             {
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s 			page 6
+
+
+  63:bsp/bsp_delay/bsp_delay.c ****                 tcnt += told - tnow;
+  64:bsp/bsp_delay/bsp_delay.c ****             }
+  65:bsp/bsp_delay/bsp_delay.c ****             else
+  66:bsp/bsp_delay/bsp_delay.c ****             {
+  67:bsp/bsp_delay/bsp_delay.c ****                 tcnt += reload - tnow + told;
+ 215              		.loc 1 67 17 is_stmt 1 view .LVU58
+ 216              		.loc 1 67 32 is_stmt 0 view .LVU59
+ 217 0016 E01A     		subs	r0, r4, r3
+ 218              		.loc 1 67 39 view .LVU60
+ 219 0018 0244     		add	r2, r2, r0
+ 220              	.LVL21:
+ 221              		.loc 1 67 22 view .LVU61
+ 222 001a 1144     		add	r1, r1, r2
+ 223              	.LVL22:
+ 224              	.L16:
+  68:bsp/bsp_delay/bsp_delay.c ****             }
+  69:bsp/bsp_delay/bsp_delay.c ****             told = tnow;
+ 225              		.loc 1 69 13 is_stmt 1 view .LVU62
+  70:bsp/bsp_delay/bsp_delay.c ****             if (tcnt >= ticks)
+ 226              		.loc 1 70 13 view .LVU63
+ 227              		.loc 1 70 16 is_stmt 0 view .LVU64
+ 228 001c 6145     		cmp	r1, ip
+ 229 001e 09D2     		bcs	.L19
+ 230              	.LVL23:
+ 231              	.L17:
+  51:bsp/bsp_delay/bsp_delay.c ****     uint32_t reload = 0;
+ 232              		.loc 1 51 14 view .LVU65
+ 233 0020 1A46     		mov	r2, r3
+ 234              	.LVL24:
+ 235              	.L14:
+  56:bsp/bsp_delay/bsp_delay.c ****     {
+ 236              		.loc 1 56 5 is_stmt 1 view .LVU66
+  58:bsp/bsp_delay/bsp_delay.c ****         if (tnow != told)
+ 237              		.loc 1 58 9 view .LVU67
+  58:bsp/bsp_delay/bsp_delay.c ****         if (tnow != told)
+ 238              		.loc 1 58 14 is_stmt 0 view .LVU68
+ 239 0022 4FF0E023 		mov	r3, #-536813568
+ 240 0026 9B69     		ldr	r3, [r3, #24]
+ 241              	.LVL25:
+  59:bsp/bsp_delay/bsp_delay.c ****         {
+ 242              		.loc 1 59 9 is_stmt 1 view .LVU69
+  59:bsp/bsp_delay/bsp_delay.c ****         {
+ 243              		.loc 1 59 12 is_stmt 0 view .LVU70
+ 244 0028 9A42     		cmp	r2, r3
+ 245 002a FAD0     		beq	.L14
+  61:bsp/bsp_delay/bsp_delay.c ****             {
+ 246              		.loc 1 61 13 is_stmt 1 view .LVU71
+  61:bsp/bsp_delay/bsp_delay.c ****             {
+ 247              		.loc 1 61 16 is_stmt 0 view .LVU72
+ 248 002c F3D9     		bls	.L15
+  63:bsp/bsp_delay/bsp_delay.c ****             }
+ 249              		.loc 1 63 17 is_stmt 1 view .LVU73
+  63:bsp/bsp_delay/bsp_delay.c ****             }
+ 250              		.loc 1 63 30 is_stmt 0 view .LVU74
+ 251 002e D21A     		subs	r2, r2, r3
+ 252              	.LVL26:
+  63:bsp/bsp_delay/bsp_delay.c ****             }
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s 			page 7
+
+
+ 253              		.loc 1 63 22 view .LVU75
+ 254 0030 1144     		add	r1, r1, r2
+ 255              	.LVL27:
+  63:bsp/bsp_delay/bsp_delay.c ****             }
+ 256              		.loc 1 63 22 view .LVU76
+ 257 0032 F3E7     		b	.L16
+ 258              	.LVL28:
+ 259              	.L19:
+  71:bsp/bsp_delay/bsp_delay.c ****             {
+  72:bsp/bsp_delay/bsp_delay.c ****                 break;
+  73:bsp/bsp_delay/bsp_delay.c ****             }
+  74:bsp/bsp_delay/bsp_delay.c ****         }
+  75:bsp/bsp_delay/bsp_delay.c ****     }
+  76:bsp/bsp_delay/bsp_delay.c **** }
+ 260              		.loc 1 76 1 view .LVU77
+ 261 0034 5DF8044B 		ldr	r4, [sp], #4
+ 262              		.cfi_restore 4
+ 263              		.cfi_def_cfa_offset 0
+ 264              	.LVL29:
+ 265              		.loc 1 76 1 view .LVU78
+ 266 0038 7047     		bx	lr
+ 267              	.L21:
+ 268 003a 00BF     		.align	2
+ 269              	.L20:
+ 270 003c 00000000 		.word	fac_ms
+ 271              		.cfi_endproc
+ 272              	.LFE136:
+ 274              		.section	.bss.fac_ms,"aw",%nobits
+ 275              		.align	2
+ 278              	fac_ms:
+ 279 0000 00000000 		.space	4
+ 280              		.section	.bss.fac_us,"aw",%nobits
+ 283              	fac_us:
+ 284 0000 00       		.space	1
+ 285              		.text
+ 286              	.Letext0:
+ 287              		.file 2 "bsp/boards/struct_typedef.h"
+ 288              		.file 3 "C:/Users/Sive/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-dev-too
+ 289              		.file 4 "C:/Users/Sive/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-dev-too
+ 290              		.file 5 "Drivers/CMSIS/Include/core_cm4.h"
+ 291              		.file 6 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h"
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s 			page 8
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 bsp_delay.c
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:21     .text.delay_init:00000000 $t
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:27     .text.delay_init:00000000 delay_init
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:57     .text.delay_init:00000020 $d
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:283    .bss.fac_us:00000000 fac_us
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:278    .bss.fac_ms:00000000 fac_ms
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:66     .text.delay_us:00000000 $t
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:72     .text.delay_us:00000000 delay_us
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:165    .text.delay_us:0000003c $d
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:170    .text.delay_ms:00000000 $t
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:176    .text.delay_ms:00000000 delay_ms
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:270    .text.delay_ms:0000003c $d
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:275    .bss.fac_ms:00000000 $d
+C:\Users\Sive\AppData\Local\Temp\ccN9ym2g.s:284    .bss.fac_us:00000000 $d
+
+UNDEFINED SYMBOLS
+SystemCoreClock

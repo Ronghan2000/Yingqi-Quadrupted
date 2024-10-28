@@ -1,0 +1,362 @@
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"freertos.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "Core/Src/freertos.c"
+  20              		.section	.text.vApplicationGetIdleTaskMemory,"ax",%progbits
+  21              		.align	1
+  22              		.global	vApplicationGetIdleTaskMemory
+  23              		.syntax unified
+  24              		.thumb
+  25              		.thumb_func
+  27              	vApplicationGetIdleTaskMemory:
+  28              	.LVL0:
+  29              	.LFB139:
+   1:Core/Src/freertos.c **** /* USER CODE BEGIN Header */
+   2:Core/Src/freertos.c **** /**
+   3:Core/Src/freertos.c ****   ******************************************************************************
+   4:Core/Src/freertos.c ****   * File Name          : freertos.c
+   5:Core/Src/freertos.c ****   * Description        : Code for freertos applications
+   6:Core/Src/freertos.c ****   ******************************************************************************
+   7:Core/Src/freertos.c ****   * @attention
+   8:Core/Src/freertos.c ****   *
+   9:Core/Src/freertos.c ****   * Copyright (c) 2024 STMicroelectronics.
+  10:Core/Src/freertos.c ****   * All rights reserved.
+  11:Core/Src/freertos.c ****   *
+  12:Core/Src/freertos.c ****   * This software is licensed under terms that can be found in the LICENSE file
+  13:Core/Src/freertos.c ****   * in the root directory of this software component.
+  14:Core/Src/freertos.c ****   * If no LICENSE file comes with this software, it is provided AS-IS.
+  15:Core/Src/freertos.c ****   *
+  16:Core/Src/freertos.c ****   ******************************************************************************
+  17:Core/Src/freertos.c ****   */
+  18:Core/Src/freertos.c **** /* USER CODE END Header */
+  19:Core/Src/freertos.c **** 
+  20:Core/Src/freertos.c **** /* Includes ------------------------------------------------------------------*/
+  21:Core/Src/freertos.c **** #include "FreeRTOS.h"
+  22:Core/Src/freertos.c **** #include "task.h"
+  23:Core/Src/freertos.c **** #include "main.h"
+  24:Core/Src/freertos.c **** #include "cmsis_os.h"
+  25:Core/Src/freertos.c **** 
+  26:Core/Src/freertos.c **** /* Private includes ----------------------------------------------------------*/
+  27:Core/Src/freertos.c **** /* USER CODE BEGIN Includes */
+  28:Core/Src/freertos.c **** 
+  29:Core/Src/freertos.c **** /* USER CODE END Includes */
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s 			page 2
+
+
+  30:Core/Src/freertos.c **** 
+  31:Core/Src/freertos.c **** /* Private typedef -----------------------------------------------------------*/
+  32:Core/Src/freertos.c **** /* USER CODE BEGIN PTD */
+  33:Core/Src/freertos.c **** 
+  34:Core/Src/freertos.c **** /* USER CODE END PTD */
+  35:Core/Src/freertos.c **** 
+  36:Core/Src/freertos.c **** /* Private define ------------------------------------------------------------*/
+  37:Core/Src/freertos.c **** /* USER CODE BEGIN PD */
+  38:Core/Src/freertos.c **** 
+  39:Core/Src/freertos.c **** /* USER CODE END PD */
+  40:Core/Src/freertos.c **** 
+  41:Core/Src/freertos.c **** /* Private macro -------------------------------------------------------------*/
+  42:Core/Src/freertos.c **** /* USER CODE BEGIN PM */
+  43:Core/Src/freertos.c **** 
+  44:Core/Src/freertos.c **** /* USER CODE END PM */
+  45:Core/Src/freertos.c **** 
+  46:Core/Src/freertos.c **** /* Private variables ---------------------------------------------------------*/
+  47:Core/Src/freertos.c **** /* USER CODE BEGIN Variables */
+  48:Core/Src/freertos.c **** 
+  49:Core/Src/freertos.c **** /* USER CODE END Variables */
+  50:Core/Src/freertos.c **** osThreadId intaskHandle;
+  51:Core/Src/freertos.c **** 
+  52:Core/Src/freertos.c **** /* Private function prototypes -----------------------------------------------*/
+  53:Core/Src/freertos.c **** /* USER CODE BEGIN FunctionPrototypes */
+  54:Core/Src/freertos.c **** 
+  55:Core/Src/freertos.c **** /* USER CODE END FunctionPrototypes */
+  56:Core/Src/freertos.c **** 
+  57:Core/Src/freertos.c **** void INS_task(void const * argument);
+  58:Core/Src/freertos.c **** 
+  59:Core/Src/freertos.c **** void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
+  60:Core/Src/freertos.c **** 
+  61:Core/Src/freertos.c **** /* GetIdleTaskMemory prototype (linked to static allocation support) */
+  62:Core/Src/freertos.c **** void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskS
+  63:Core/Src/freertos.c **** 
+  64:Core/Src/freertos.c **** /* GetTimerTaskMemory prototype (linked to static allocation support) */
+  65:Core/Src/freertos.c **** void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTa
+  66:Core/Src/freertos.c **** 
+  67:Core/Src/freertos.c **** /* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
+  68:Core/Src/freertos.c **** static StaticTask_t xIdleTaskTCBBuffer;
+  69:Core/Src/freertos.c **** static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
+  70:Core/Src/freertos.c **** 
+  71:Core/Src/freertos.c **** void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskS
+  72:Core/Src/freertos.c **** {
+  30              		.loc 1 72 1 view -0
+  31              		.cfi_startproc
+  32              		@ args = 0, pretend = 0, frame = 0
+  33              		@ frame_needed = 0, uses_anonymous_args = 0
+  34              		@ link register save eliminated.
+  73:Core/Src/freertos.c ****   *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+  35              		.loc 1 73 3 view .LVU1
+  36              		.loc 1 73 25 is_stmt 0 view .LVU2
+  37 0000 034B     		ldr	r3, .L2
+  38 0002 0360     		str	r3, [r0]
+  74:Core/Src/freertos.c ****   *ppxIdleTaskStackBuffer = &xIdleStack[0];
+  39              		.loc 1 74 3 is_stmt 1 view .LVU3
+  40              		.loc 1 74 27 is_stmt 0 view .LVU4
+  41 0004 034B     		ldr	r3, .L2+4
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s 			page 3
+
+
+  42 0006 0B60     		str	r3, [r1]
+  75:Core/Src/freertos.c ****   *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+  43              		.loc 1 75 3 is_stmt 1 view .LVU5
+  44              		.loc 1 75 25 is_stmt 0 view .LVU6
+  45 0008 8023     		movs	r3, #128
+  46 000a 1360     		str	r3, [r2]
+  76:Core/Src/freertos.c ****   /* place for user code */
+  77:Core/Src/freertos.c **** }
+  47              		.loc 1 77 1 view .LVU7
+  48 000c 7047     		bx	lr
+  49              	.L3:
+  50 000e 00BF     		.align	2
+  51              	.L2:
+  52 0010 00000000 		.word	xIdleTaskTCBBuffer
+  53 0014 00000000 		.word	xIdleStack
+  54              		.cfi_endproc
+  55              	.LFE139:
+  57              		.section	.text.vApplicationGetTimerTaskMemory,"ax",%progbits
+  58              		.align	1
+  59              		.global	vApplicationGetTimerTaskMemory
+  60              		.syntax unified
+  61              		.thumb
+  62              		.thumb_func
+  64              	vApplicationGetTimerTaskMemory:
+  65              	.LVL1:
+  66              	.LFB140:
+  78:Core/Src/freertos.c **** /* USER CODE END GET_IDLE_TASK_MEMORY */
+  79:Core/Src/freertos.c **** 
+  80:Core/Src/freertos.c **** /* USER CODE BEGIN GET_TIMER_TASK_MEMORY */
+  81:Core/Src/freertos.c **** static StaticTask_t xTimerTaskTCBBuffer;
+  82:Core/Src/freertos.c **** static StackType_t xTimerStack[configTIMER_TASK_STACK_DEPTH];
+  83:Core/Src/freertos.c **** 
+  84:Core/Src/freertos.c **** void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTa
+  85:Core/Src/freertos.c **** {
+  67              		.loc 1 85 1 is_stmt 1 view -0
+  68              		.cfi_startproc
+  69              		@ args = 0, pretend = 0, frame = 0
+  70              		@ frame_needed = 0, uses_anonymous_args = 0
+  71              		@ link register save eliminated.
+  86:Core/Src/freertos.c ****   *ppxTimerTaskTCBBuffer = &xTimerTaskTCBBuffer;
+  72              		.loc 1 86 3 view .LVU9
+  73              		.loc 1 86 26 is_stmt 0 view .LVU10
+  74 0000 034B     		ldr	r3, .L5
+  75 0002 0360     		str	r3, [r0]
+  87:Core/Src/freertos.c ****   *ppxTimerTaskStackBuffer = &xTimerStack[0];
+  76              		.loc 1 87 3 is_stmt 1 view .LVU11
+  77              		.loc 1 87 28 is_stmt 0 view .LVU12
+  78 0004 034B     		ldr	r3, .L5+4
+  79 0006 0B60     		str	r3, [r1]
+  88:Core/Src/freertos.c ****   *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
+  80              		.loc 1 88 3 is_stmt 1 view .LVU13
+  81              		.loc 1 88 26 is_stmt 0 view .LVU14
+  82 0008 4FF48073 		mov	r3, #256
+  83 000c 1360     		str	r3, [r2]
+  89:Core/Src/freertos.c ****   /* place for user code */
+  90:Core/Src/freertos.c **** }
+  84              		.loc 1 90 1 view .LVU15
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s 			page 4
+
+
+  85 000e 7047     		bx	lr
+  86              	.L6:
+  87              		.align	2
+  88              	.L5:
+  89 0010 00000000 		.word	xTimerTaskTCBBuffer
+  90 0014 00000000 		.word	xTimerStack
+  91              		.cfi_endproc
+  92              	.LFE140:
+  94              		.section	.text.MX_FREERTOS_Init,"ax",%progbits
+  95              		.align	1
+  96              		.global	MX_FREERTOS_Init
+  97              		.syntax unified
+  98              		.thumb
+  99              		.thumb_func
+ 101              	MX_FREERTOS_Init:
+ 102              	.LFB141:
+  91:Core/Src/freertos.c **** /* USER CODE END GET_TIMER_TASK_MEMORY */
+  92:Core/Src/freertos.c **** 
+  93:Core/Src/freertos.c **** /**
+  94:Core/Src/freertos.c ****   * @brief  FreeRTOS initialization
+  95:Core/Src/freertos.c ****   * @param  None
+  96:Core/Src/freertos.c ****   * @retval None
+  97:Core/Src/freertos.c ****   */
+  98:Core/Src/freertos.c **** void MX_FREERTOS_Init(void) {
+ 103              		.loc 1 98 29 is_stmt 1 view -0
+ 104              		.cfi_startproc
+ 105              		@ args = 0, pretend = 0, frame = 0
+ 106              		@ frame_needed = 0, uses_anonymous_args = 0
+ 107              		@ link register save eliminated.
+  99:Core/Src/freertos.c ****   /* USER CODE BEGIN Init */
+ 100:Core/Src/freertos.c **** 
+ 101:Core/Src/freertos.c ****   /* USER CODE END Init */
+ 102:Core/Src/freertos.c **** 
+ 103:Core/Src/freertos.c ****   /* USER CODE BEGIN RTOS_MUTEX */
+ 104:Core/Src/freertos.c ****   /* add mutexes, ... */
+ 105:Core/Src/freertos.c ****   /* USER CODE END RTOS_MUTEX */
+ 106:Core/Src/freertos.c **** 
+ 107:Core/Src/freertos.c ****   /* USER CODE BEGIN RTOS_SEMAPHORES */
+ 108:Core/Src/freertos.c ****   /* add semaphores, ... */
+ 109:Core/Src/freertos.c ****   /* USER CODE END RTOS_SEMAPHORES */
+ 110:Core/Src/freertos.c **** 
+ 111:Core/Src/freertos.c ****   /* USER CODE BEGIN RTOS_TIMERS */
+ 112:Core/Src/freertos.c ****   /* start timers, add new ones, ... */
+ 113:Core/Src/freertos.c ****   /* USER CODE END RTOS_TIMERS */
+ 114:Core/Src/freertos.c **** 
+ 115:Core/Src/freertos.c ****   /* USER CODE BEGIN RTOS_QUEUES */
+ 116:Core/Src/freertos.c ****   /* add queues, ... */
+ 117:Core/Src/freertos.c ****   /* USER CODE END RTOS_QUEUES */
+ 118:Core/Src/freertos.c **** 
+ 119:Core/Src/freertos.c ****   /* Create the thread(s) */
+ 120:Core/Src/freertos.c ****   /* definition and creation of intask */
+ 121:Core/Src/freertos.c ****   // osThreadDef(intask, INS_task, osPriorityNormal, 0, 128);
+ 122:Core/Src/freertos.c ****   // intaskHandle = osThreadCreate(osThread(intask), NULL);
+ 123:Core/Src/freertos.c **** 
+ 124:Core/Src/freertos.c ****   /* USER CODE BEGIN RTOS_THREADS */
+ 125:Core/Src/freertos.c ****   /* add threads, ... */
+ 126:Core/Src/freertos.c ****   /* USER CODE END RTOS_THREADS */
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s 			page 5
+
+
+ 127:Core/Src/freertos.c **** 
+ 128:Core/Src/freertos.c **** }
+ 108              		.loc 1 128 1 view .LVU17
+ 109 0000 7047     		bx	lr
+ 110              		.cfi_endproc
+ 111              	.LFE141:
+ 113              		.section	.text.INS_task,"ax",%progbits
+ 114              		.align	1
+ 115              		.weak	INS_task
+ 116              		.syntax unified
+ 117              		.thumb
+ 118              		.thumb_func
+ 120              	INS_task:
+ 121              	.LVL2:
+ 122              	.LFB142:
+ 129:Core/Src/freertos.c **** 
+ 130:Core/Src/freertos.c **** /* USER CODE BEGIN Header_INS_task */
+ 131:Core/Src/freertos.c **** /**
+ 132:Core/Src/freertos.c ****   * @brief  Function implementing the intask thread.
+ 133:Core/Src/freertos.c ****   * @param  argument: Not used
+ 134:Core/Src/freertos.c ****   * @retval None
+ 135:Core/Src/freertos.c ****   */
+ 136:Core/Src/freertos.c **** /* USER CODE END Header_INS_task */
+ 137:Core/Src/freertos.c **** __weak void INS_task(void const * argument)
+ 138:Core/Src/freertos.c **** {
+ 123              		.loc 1 138 1 view -0
+ 124              		.cfi_startproc
+ 125              		@ args = 0, pretend = 0, frame = 0
+ 126              		@ frame_needed = 0, uses_anonymous_args = 0
+ 127              		@ link register save eliminated.
+ 139:Core/Src/freertos.c ****   /* USER CODE BEGIN INS_task */
+ 140:Core/Src/freertos.c **** //   INS_Init();
+ 141:Core/Src/freertos.c **** //   /* Infinite loop */
+ 142:Core/Src/freertos.c **** //   for(;;)
+ 143:Core/Src/freertos.c **** //   { 
+ 144:Core/Src/freertos.c **** //     INS_Task();
+ 145:Core/Src/freertos.c **** //     osDelay(1);
+ 146:Core/Src/freertos.c **** //   }
+ 147:Core/Src/freertos.c ****   /* USER CODE END INS_task */
+ 148:Core/Src/freertos.c **** }
+ 128              		.loc 1 148 1 view .LVU19
+ 129 0000 7047     		bx	lr
+ 130              		.cfi_endproc
+ 131              	.LFE142:
+ 133              		.section	.bss.xTimerStack,"aw",%nobits
+ 134              		.align	2
+ 137              	xTimerStack:
+ 138 0000 00000000 		.space	1024
+ 138      00000000 
+ 138      00000000 
+ 138      00000000 
+ 138      00000000 
+ 139              		.section	.bss.xTimerTaskTCBBuffer,"aw",%nobits
+ 140              		.align	2
+ 143              	xTimerTaskTCBBuffer:
+ 144 0000 00000000 		.space	84
+ 144      00000000 
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s 			page 6
+
+
+ 144      00000000 
+ 144      00000000 
+ 144      00000000 
+ 145              		.section	.bss.xIdleStack,"aw",%nobits
+ 146              		.align	2
+ 149              	xIdleStack:
+ 150 0000 00000000 		.space	512
+ 150      00000000 
+ 150      00000000 
+ 150      00000000 
+ 150      00000000 
+ 151              		.section	.bss.xIdleTaskTCBBuffer,"aw",%nobits
+ 152              		.align	2
+ 155              	xIdleTaskTCBBuffer:
+ 156 0000 00000000 		.space	84
+ 156      00000000 
+ 156      00000000 
+ 156      00000000 
+ 156      00000000 
+ 157              		.global	intaskHandle
+ 158              		.section	.bss.intaskHandle,"aw",%nobits
+ 159              		.align	2
+ 162              	intaskHandle:
+ 163 0000 00000000 		.space	4
+ 164              		.text
+ 165              	.Letext0:
+ 166              		.file 2 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 167              		.file 3 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 168              		.file 4 "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h"
+ 169              		.file 5 "Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h"
+ 170              		.file 6 "Middlewares/Third_Party/FreeRTOS/Source/include/task.h"
+ 171              		.file 7 "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h"
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s 			page 7
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 freertos.c
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:21     .text.vApplicationGetIdleTaskMemory:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:27     .text.vApplicationGetIdleTaskMemory:00000000 vApplicationGetIdleTaskMemory
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:52     .text.vApplicationGetIdleTaskMemory:00000010 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:155    .bss.xIdleTaskTCBBuffer:00000000 xIdleTaskTCBBuffer
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:149    .bss.xIdleStack:00000000 xIdleStack
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:58     .text.vApplicationGetTimerTaskMemory:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:64     .text.vApplicationGetTimerTaskMemory:00000000 vApplicationGetTimerTaskMemory
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:89     .text.vApplicationGetTimerTaskMemory:00000010 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:143    .bss.xTimerTaskTCBBuffer:00000000 xTimerTaskTCBBuffer
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:137    .bss.xTimerStack:00000000 xTimerStack
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:95     .text.MX_FREERTOS_Init:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:101    .text.MX_FREERTOS_Init:00000000 MX_FREERTOS_Init
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:114    .text.INS_task:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:120    .text.INS_task:00000000 INS_task
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:134    .bss.xTimerStack:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:140    .bss.xTimerTaskTCBBuffer:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:146    .bss.xIdleStack:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:152    .bss.xIdleTaskTCBBuffer:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:162    .bss.intaskHandle:00000000 intaskHandle
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccNhTNmb.s:159    .bss.intaskHandle:00000000 $d
+
+NO UNDEFINED SYMBOLS

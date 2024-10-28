@@ -1,0 +1,1204 @@
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"MahonyAHRS.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "moudels/algorithm/MahonyAHRS.c"
+  20              		.section	.text.invSqrt,"ax",%progbits
+  21              		.align	1
+  22              		.global	invSqrt
+  23              		.syntax unified
+  24              		.thumb
+  25              		.thumb_func
+  27              	invSqrt:
+  28              	.LVL0:
+  29              	.LFB2:
+   1:moudels/algorithm/MahonyAHRS.c **** //=================================================================================================
+   2:moudels/algorithm/MahonyAHRS.c **** // MahonyAHRS.c
+   3:moudels/algorithm/MahonyAHRS.c **** //=================================================================================================
+   4:moudels/algorithm/MahonyAHRS.c **** //
+   5:moudels/algorithm/MahonyAHRS.c **** // Madgwick's implementation of Mayhony's AHRS algorithm.
+   6:moudels/algorithm/MahonyAHRS.c **** // See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
+   7:moudels/algorithm/MahonyAHRS.c **** //
+   8:moudels/algorithm/MahonyAHRS.c **** // Date			Author			Notes
+   9:moudels/algorithm/MahonyAHRS.c **** // 29/09/2011	SOH Madgwick    Initial release
+  10:moudels/algorithm/MahonyAHRS.c **** // 02/10/2011	SOH Madgwick	Optimised for reduced CPU load
+  11:moudels/algorithm/MahonyAHRS.c **** //
+  12:moudels/algorithm/MahonyAHRS.c **** //=================================================================================================
+  13:moudels/algorithm/MahonyAHRS.c **** 
+  14:moudels/algorithm/MahonyAHRS.c **** //-------------------------------------------------------------------------------------------------
+  15:moudels/algorithm/MahonyAHRS.c **** // Header files
+  16:moudels/algorithm/MahonyAHRS.c **** 
+  17:moudels/algorithm/MahonyAHRS.c **** #include "MahonyAHRS.h"
+  18:moudels/algorithm/MahonyAHRS.c **** #include <math.h>
+  19:moudels/algorithm/MahonyAHRS.c **** 
+  20:moudels/algorithm/MahonyAHRS.c **** //-------------------------------------------------------------------------------------------------
+  21:moudels/algorithm/MahonyAHRS.c **** // Definitions
+  22:moudels/algorithm/MahonyAHRS.c **** 
+  23:moudels/algorithm/MahonyAHRS.c **** #define sampleFreq	1000.0f			// sample frequency in Hz
+  24:moudels/algorithm/MahonyAHRS.c **** #define twoKpDef	(2.0f * 0.5f)	// 2 * proportional gain
+  25:moudels/algorithm/MahonyAHRS.c **** #define twoKiDef	(2.0f * 0.0f)	// 2 * integral gain
+  26:moudels/algorithm/MahonyAHRS.c **** 
+  27:moudels/algorithm/MahonyAHRS.c **** //-------------------------------------------------------------------------------------------------
+  28:moudels/algorithm/MahonyAHRS.c **** // Variable definitions
+  29:moudels/algorithm/MahonyAHRS.c **** 
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 2
+
+
+  30:moudels/algorithm/MahonyAHRS.c **** volatile float twoKp = twoKpDef;											// 2 * proportional gain (Kp)
+  31:moudels/algorithm/MahonyAHRS.c **** volatile float twoKi = twoKiDef;											// 2 * integral gain (Ki)
+  32:moudels/algorithm/MahonyAHRS.c **** //volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;					// quaternion of sensor frame rela
+  33:moudels/algorithm/MahonyAHRS.c **** volatile float integralFBx = 0.0f,  integralFBy = 0.0f, integralFBz = 0.0f;	// integral error terms
+  34:moudels/algorithm/MahonyAHRS.c **** 
+  35:moudels/algorithm/MahonyAHRS.c **** //-------------------------------------------------------------------------------------------------
+  36:moudels/algorithm/MahonyAHRS.c **** // Function declarations
+  37:moudels/algorithm/MahonyAHRS.c **** 
+  38:moudels/algorithm/MahonyAHRS.c **** float invSqrt(float x);
+  39:moudels/algorithm/MahonyAHRS.c **** 
+  40:moudels/algorithm/MahonyAHRS.c **** //=================================================================================================
+  41:moudels/algorithm/MahonyAHRS.c **** // Functions
+  42:moudels/algorithm/MahonyAHRS.c **** 
+  43:moudels/algorithm/MahonyAHRS.c **** //-------------------------------------------------------------------------------------------------
+  44:moudels/algorithm/MahonyAHRS.c **** // AHRS algorithm update
+  45:moudels/algorithm/MahonyAHRS.c **** 
+  46:moudels/algorithm/MahonyAHRS.c **** void MahonyAHRSupdate(float q[4], float gx, float gy, float gz, float ax, float ay, float az, float
+  47:moudels/algorithm/MahonyAHRS.c **** 	float recipNorm;
+  48:moudels/algorithm/MahonyAHRS.c ****     // float q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;  
+  49:moudels/algorithm/MahonyAHRS.c **** 	// float hx, hy, bx, bz;
+  50:moudels/algorithm/MahonyAHRS.c **** 	// float halfvx, halfvy, halfvz, halfwx, halfwy, halfwz;
+  51:moudels/algorithm/MahonyAHRS.c **** 	// float halfex, halfey, halfez;
+  52:moudels/algorithm/MahonyAHRS.c **** 	float qa, qb, qc;
+  53:moudels/algorithm/MahonyAHRS.c **** 
+  54:moudels/algorithm/MahonyAHRS.c **** 	// Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation
+  55:moudels/algorithm/MahonyAHRS.c **** 	if((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f)) {
+  56:moudels/algorithm/MahonyAHRS.c **** 		MahonyAHRSupdateIMU(q, gx, gy, gz, ax, ay, az);
+  57:moudels/algorithm/MahonyAHRS.c **** 		return;
+  58:moudels/algorithm/MahonyAHRS.c **** 	}
+  59:moudels/algorithm/MahonyAHRS.c **** 
+  60:moudels/algorithm/MahonyAHRS.c **** 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisa
+  61:moudels/algorithm/MahonyAHRS.c **** 	// if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
+  62:moudels/algorithm/MahonyAHRS.c **** 
+  63:moudels/algorithm/MahonyAHRS.c **** 	// 	// Normalise accelerometer measurement
+  64:moudels/algorithm/MahonyAHRS.c **** 	// 	recipNorm = invSqrt(ax * ax + ay * ay + az * az);
+  65:moudels/algorithm/MahonyAHRS.c **** 	// 	ax *= recipNorm;
+  66:moudels/algorithm/MahonyAHRS.c **** 	// 	ay *= recipNorm;
+  67:moudels/algorithm/MahonyAHRS.c **** 	// 	az *= recipNorm;     
+  68:moudels/algorithm/MahonyAHRS.c **** 
+  69:moudels/algorithm/MahonyAHRS.c **** 	// 	// Normalise magnetometer measurement
+  70:moudels/algorithm/MahonyAHRS.c **** 	// 	recipNorm = invSqrt(mx * mx + my * my + mz * mz);
+  71:moudels/algorithm/MahonyAHRS.c **** 	// 	mx *= recipNorm;
+  72:moudels/algorithm/MahonyAHRS.c **** 	// 	my *= recipNorm;
+  73:moudels/algorithm/MahonyAHRS.c **** 	// 	mz *= recipNorm;   
+  74:moudels/algorithm/MahonyAHRS.c **** 
+  75:moudels/algorithm/MahonyAHRS.c ****     //     // Auxiliary variables to avoid repeated arithmetic
+  76:moudels/algorithm/MahonyAHRS.c ****     //     q0q0 = q[0] * q[0];
+  77:moudels/algorithm/MahonyAHRS.c ****     //     q0q1 = q[0] * q[1];
+  78:moudels/algorithm/MahonyAHRS.c ****     //     q0q2 = q[0] * q[2];
+  79:moudels/algorithm/MahonyAHRS.c ****     //     q0q3 = q[0] * q[3];
+  80:moudels/algorithm/MahonyAHRS.c ****     //     q1q1 = q[1] * q[1];
+  81:moudels/algorithm/MahonyAHRS.c ****     //     q1q2 = q[1] * q[2];
+  82:moudels/algorithm/MahonyAHRS.c ****     //     q1q3 = q[1] * q[3];
+  83:moudels/algorithm/MahonyAHRS.c ****     //     q2q2 = q[2] * q[2];
+  84:moudels/algorithm/MahonyAHRS.c ****     //     q2q3 = q[2] * q[3];
+  85:moudels/algorithm/MahonyAHRS.c ****     //     q3q3 = q[3] * q[3];   
+  86:moudels/algorithm/MahonyAHRS.c **** 
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 3
+
+
+  87:moudels/algorithm/MahonyAHRS.c ****     //     // Reference direction of Earth's magnetic field
+  88:moudels/algorithm/MahonyAHRS.c ****     //     hx = 2.0f * (mx * (0.5f - q2q2 - q3q3) + my * (q1q2 - q0q3) + mz * (q1q3 + q0q2));
+  89:moudels/algorithm/MahonyAHRS.c ****     //     hy = 2.0f * (mx * (q1q2 + q0q3) + my * (0.5f - q1q1 - q3q3) + mz * (q2q3 - q0q1));
+  90:moudels/algorithm/MahonyAHRS.c ****     //     bx = sqrt(hx * hx + hy * hy);
+  91:moudels/algorithm/MahonyAHRS.c ****     //     bz = 2.0f * (mx * (q1q3 - q0q2) + my * (q2q3 + q0q1) + mz * (0.5f - q1q1 - q2q2));
+  92:moudels/algorithm/MahonyAHRS.c **** 
+  93:moudels/algorithm/MahonyAHRS.c **** 	// 	// Estimated direction of gravity and magnetic field
+  94:moudels/algorithm/MahonyAHRS.c **** 	// 	halfvx = q1q3 - q0q2;
+  95:moudels/algorithm/MahonyAHRS.c **** 	// 	halfvy = q0q1 + q2q3;
+  96:moudels/algorithm/MahonyAHRS.c **** 	// 	halfvz = q0q0 - 0.5f + q3q3;
+  97:moudels/algorithm/MahonyAHRS.c ****     //     halfwx = bx * (0.5f - q2q2 - q3q3) + bz * (q1q3 - q0q2);
+  98:moudels/algorithm/MahonyAHRS.c ****     //     halfwy = bx * (q1q2 - q0q3) + bz * (q0q1 + q2q3);
+  99:moudels/algorithm/MahonyAHRS.c ****     //     halfwz = bx * (q0q2 + q1q3) + bz * (0.5f - q1q1 - q2q2);  
+ 100:moudels/algorithm/MahonyAHRS.c **** 	
+ 101:moudels/algorithm/MahonyAHRS.c **** 	// 	// Error is sum of cross product between estimated direction and measured direction of field v
+ 102:moudels/algorithm/MahonyAHRS.c **** 	// 	halfex = (ay * halfvz - az * halfvy) + (my * halfwz - mz * halfwy);
+ 103:moudels/algorithm/MahonyAHRS.c **** 	// 	halfey = (az * halfvx - ax * halfvz) + (mz * halfwx - mx * halfwz);
+ 104:moudels/algorithm/MahonyAHRS.c **** 	// 	halfez = (ax * halfvy - ay * halfvx) + (mx * halfwy - my * halfwx);
+ 105:moudels/algorithm/MahonyAHRS.c **** 
+ 106:moudels/algorithm/MahonyAHRS.c **** 	// 	// Compute and apply integral feedback if enabled
+ 107:moudels/algorithm/MahonyAHRS.c **** 	// 	if(twoKi > 0.0f) {
+ 108:moudels/algorithm/MahonyAHRS.c **** 	// 		integralFBx += twoKi * halfex * (1.0f / sampleFreq);	// integral error scaled by Ki
+ 109:moudels/algorithm/MahonyAHRS.c **** 	// 		integralFBy += twoKi * halfey * (1.0f / sampleFreq);
+ 110:moudels/algorithm/MahonyAHRS.c **** 	// 		integralFBz += twoKi * halfez * (1.0f / sampleFreq);
+ 111:moudels/algorithm/MahonyAHRS.c **** 	// 		gx += integralFBx;	// apply integral feedback
+ 112:moudels/algorithm/MahonyAHRS.c **** 	// 		gy += integralFBy;
+ 113:moudels/algorithm/MahonyAHRS.c **** 	// 		gz += integralFBz;
+ 114:moudels/algorithm/MahonyAHRS.c **** 	// 	}
+ 115:moudels/algorithm/MahonyAHRS.c **** 	// 	else {
+ 116:moudels/algorithm/MahonyAHRS.c **** 	// 		integralFBx = 0.0f;	// prevent integral windup
+ 117:moudels/algorithm/MahonyAHRS.c **** 	// 		integralFBy = 0.0f;
+ 118:moudels/algorithm/MahonyAHRS.c **** 	// 		integralFBz = 0.0f;
+ 119:moudels/algorithm/MahonyAHRS.c **** 	// 	}
+ 120:moudels/algorithm/MahonyAHRS.c **** 
+ 121:moudels/algorithm/MahonyAHRS.c **** 	// 	// Apply proportional feedback
+ 122:moudels/algorithm/MahonyAHRS.c **** 	// 	gx += twoKp * halfex;
+ 123:moudels/algorithm/MahonyAHRS.c **** 	// 	gy += twoKp * halfey;
+ 124:moudels/algorithm/MahonyAHRS.c **** 	// 	gz += twoKp * halfez;
+ 125:moudels/algorithm/MahonyAHRS.c **** 	// }
+ 126:moudels/algorithm/MahonyAHRS.c **** 	
+ 127:moudels/algorithm/MahonyAHRS.c **** 	// Integrate rate of change of quaternion
+ 128:moudels/algorithm/MahonyAHRS.c **** 	gx *= (0.5f * (1.0f / sampleFreq));		// pre-multiply common factors
+ 129:moudels/algorithm/MahonyAHRS.c **** 	gy *= (0.5f * (1.0f / sampleFreq));
+ 130:moudels/algorithm/MahonyAHRS.c **** 	gz *= (0.5f * (1.0f / sampleFreq));
+ 131:moudels/algorithm/MahonyAHRS.c **** 	qa = q[0];
+ 132:moudels/algorithm/MahonyAHRS.c **** 	qb = q[1];
+ 133:moudels/algorithm/MahonyAHRS.c **** 	qc = q[2];
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[0] += (-qb * gx - qc * gy - q[3] * gz);
+ 135:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 136:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 137:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 138:moudels/algorithm/MahonyAHRS.c **** 	
+ 139:moudels/algorithm/MahonyAHRS.c **** 	// Normalise quaternion
+ 140:moudels/algorithm/MahonyAHRS.c **** 	recipNorm = invSqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+ 141:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 142:moudels/algorithm/MahonyAHRS.c **** 	q[1] *= recipNorm;
+ 143:moudels/algorithm/MahonyAHRS.c **** 	q[2] *= recipNorm;
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 4
+
+
+ 144:moudels/algorithm/MahonyAHRS.c **** 	q[3] *= recipNorm;
+ 145:moudels/algorithm/MahonyAHRS.c **** }
+ 146:moudels/algorithm/MahonyAHRS.c **** 
+ 147:moudels/algorithm/MahonyAHRS.c **** //-------------------------------------------------------------------------------------------------
+ 148:moudels/algorithm/MahonyAHRS.c **** // IMU algorithm update
+ 149:moudels/algorithm/MahonyAHRS.c **** 
+ 150:moudels/algorithm/MahonyAHRS.c **** void MahonyAHRSupdateIMU(float q[4], float gx, float gy, float gz, float ax, float ay, float az) {
+ 151:moudels/algorithm/MahonyAHRS.c **** 	float recipNorm;
+ 152:moudels/algorithm/MahonyAHRS.c **** 	float halfvx, halfvy, halfvz;
+ 153:moudels/algorithm/MahonyAHRS.c **** 	float halfex, halfey, halfez;
+ 154:moudels/algorithm/MahonyAHRS.c **** 	float qa, qb, qc;
+ 155:moudels/algorithm/MahonyAHRS.c **** 
+ 156:moudels/algorithm/MahonyAHRS.c **** 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisa
+ 157:moudels/algorithm/MahonyAHRS.c **** 	if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
+ 158:moudels/algorithm/MahonyAHRS.c **** 
+ 159:moudels/algorithm/MahonyAHRS.c **** 		// Normalise accelerometer measurement
+ 160:moudels/algorithm/MahonyAHRS.c **** 		recipNorm = invSqrt(ax * ax + ay * ay + az * az);
+ 161:moudels/algorithm/MahonyAHRS.c **** 		ax *= recipNorm;
+ 162:moudels/algorithm/MahonyAHRS.c **** 		ay *= recipNorm;
+ 163:moudels/algorithm/MahonyAHRS.c **** 		az *= recipNorm;        
+ 164:moudels/algorithm/MahonyAHRS.c **** 
+ 165:moudels/algorithm/MahonyAHRS.c **** 		// Estimated direction of gravity and vector perpendicular to magnetic flux
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvx = q[1] * q[3] - q[0] * q[2];
+ 167:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 168:moudels/algorithm/MahonyAHRS.c **** 		halfvz = q[0] * q[0] - 0.5f + q[3] * q[3];
+ 169:moudels/algorithm/MahonyAHRS.c **** 	
+ 170:moudels/algorithm/MahonyAHRS.c **** 		// Error is sum of cross product between estimated and measured direction of gravity
+ 171:moudels/algorithm/MahonyAHRS.c **** 		halfex = (ay * halfvz - az * halfvy);
+ 172:moudels/algorithm/MahonyAHRS.c **** 		halfey = (az * halfvx - ax * halfvz);
+ 173:moudels/algorithm/MahonyAHRS.c **** 		halfez = (ax * halfvy - ay * halfvx);
+ 174:moudels/algorithm/MahonyAHRS.c **** 
+ 175:moudels/algorithm/MahonyAHRS.c **** 		// Compute and apply integral feedback if enabled
+ 176:moudels/algorithm/MahonyAHRS.c **** 		if(twoKi > 0.0f) {
+ 177:moudels/algorithm/MahonyAHRS.c **** 			integralFBx += twoKi * halfex * (1.0f / sampleFreq);	// integral error scaled by Ki
+ 178:moudels/algorithm/MahonyAHRS.c **** 			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
+ 179:moudels/algorithm/MahonyAHRS.c **** 			integralFBz += twoKi * halfez * (1.0f / sampleFreq);
+ 180:moudels/algorithm/MahonyAHRS.c **** 			gx += integralFBx;	// apply integral feedback
+ 181:moudels/algorithm/MahonyAHRS.c **** 			gy += integralFBy;
+ 182:moudels/algorithm/MahonyAHRS.c **** 			gz += integralFBz;
+ 183:moudels/algorithm/MahonyAHRS.c **** 		}
+ 184:moudels/algorithm/MahonyAHRS.c **** 		else {
+ 185:moudels/algorithm/MahonyAHRS.c **** 			integralFBx = 0.0f;	// prevent integral windup
+ 186:moudels/algorithm/MahonyAHRS.c **** 			integralFBy = 0.0f;
+ 187:moudels/algorithm/MahonyAHRS.c **** 			integralFBz = 0.0f;
+ 188:moudels/algorithm/MahonyAHRS.c **** 		}
+ 189:moudels/algorithm/MahonyAHRS.c **** 
+ 190:moudels/algorithm/MahonyAHRS.c **** 		// Apply proportional feedback
+ 191:moudels/algorithm/MahonyAHRS.c **** 		gx += twoKp * halfex;
+ 192:moudels/algorithm/MahonyAHRS.c **** 		gy += twoKp * halfey;
+ 193:moudels/algorithm/MahonyAHRS.c **** 		gz += twoKp * halfez;
+ 194:moudels/algorithm/MahonyAHRS.c **** 	}
+ 195:moudels/algorithm/MahonyAHRS.c **** 	
+ 196:moudels/algorithm/MahonyAHRS.c **** 	// Integrate rate of change of quaternion
+ 197:moudels/algorithm/MahonyAHRS.c **** 	gx *= (0.5f * (1.0f / sampleFreq));		// pre-multiply common factors
+ 198:moudels/algorithm/MahonyAHRS.c **** 	gy *= (0.5f * (1.0f / sampleFreq));
+ 199:moudels/algorithm/MahonyAHRS.c **** 	gz *= (0.5f * (1.0f / sampleFreq));
+ 200:moudels/algorithm/MahonyAHRS.c **** 	qa = q[0];
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 5
+
+
+ 201:moudels/algorithm/MahonyAHRS.c **** 	qb = q[1];
+ 202:moudels/algorithm/MahonyAHRS.c **** 	qc = q[2];
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[0] += (-qb * gx - qc * gy - q[3] * gz);
+ 204:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 205:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 206:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 207:moudels/algorithm/MahonyAHRS.c **** 	
+ 208:moudels/algorithm/MahonyAHRS.c **** 	// Normalise quaternion
+ 209:moudels/algorithm/MahonyAHRS.c **** 	recipNorm = invSqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+ 210:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 211:moudels/algorithm/MahonyAHRS.c **** 	q[1] *= recipNorm;
+ 212:moudels/algorithm/MahonyAHRS.c **** 	q[2] *= recipNorm;
+ 213:moudels/algorithm/MahonyAHRS.c **** 	q[3] *= recipNorm;
+ 214:moudels/algorithm/MahonyAHRS.c **** }
+ 215:moudels/algorithm/MahonyAHRS.c **** 
+ 216:moudels/algorithm/MahonyAHRS.c **** //-------------------------------------------------------------------------------------------------
+ 217:moudels/algorithm/MahonyAHRS.c **** // Fast inverse square-root
+ 218:moudels/algorithm/MahonyAHRS.c **** // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
+ 219:moudels/algorithm/MahonyAHRS.c **** 
+ 220:moudels/algorithm/MahonyAHRS.c **** float invSqrt(float x) {
+  30              		.loc 1 220 24 view -0
+  31              		.cfi_startproc
+  32              		@ args = 0, pretend = 0, frame = 0
+  33              		@ frame_needed = 0, uses_anonymous_args = 0
+  34              		@ link register save eliminated.
+ 221:moudels/algorithm/MahonyAHRS.c **** 	float halfx = 0.5f * x;
+  35              		.loc 1 221 2 view .LVU1
+  36              		.loc 1 221 8 is_stmt 0 view .LVU2
+  37 0000 F6EE007A 		vmov.f32	s15, #5.0e-1
+  38 0004 60EE277A 		vmul.f32	s15, s0, s15
+  39              	.LVL1:
+ 222:moudels/algorithm/MahonyAHRS.c **** 	float y = x;
+  40              		.loc 1 222 2 is_stmt 1 view .LVU3
+ 223:moudels/algorithm/MahonyAHRS.c **** 	long i = *(long*)&y;
+  41              		.loc 1 223 2 view .LVU4
+  42              		.loc 1 223 11 is_stmt 0 view .LVU5
+  43 0008 10EE103A 		vmov	r3, s0	@ int
+  44              	.LVL2:
+ 224:moudels/algorithm/MahonyAHRS.c **** 	i = 0x5f3759df - (i>>1);
+  45              		.loc 1 224 2 is_stmt 1 view .LVU6
+ 225:moudels/algorithm/MahonyAHRS.c **** 	y = *(float*)&i;
+  46              		.loc 1 225 2 view .LVU7
+  47              		.loc 1 225 6 is_stmt 0 view .LVU8
+  48 000c 074A     		ldr	r2, .L2
+  49 000e A2EB6303 		sub	r3, r2, r3, asr #1
+  50              	.LVL3:
+  51              		.loc 1 225 6 view .LVU9
+  52 0012 07EE103A 		vmov	s14, r3	@ int
+  53              	.LVL4:
+ 226:moudels/algorithm/MahonyAHRS.c **** 	y = y * (1.5f - (halfx * y * y));
+  54              		.loc 1 226 2 is_stmt 1 view .LVU10
+  55              		.loc 1 226 25 is_stmt 0 view .LVU11
+  56 0016 67EE277A 		vmul.f32	s15, s14, s15
+  57              	.LVL5:
+  58              		.loc 1 226 29 view .LVU12
+  59 001a 67EE277A 		vmul.f32	s15, s14, s15
+  60              		.loc 1 226 16 view .LVU13
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 6
+
+
+  61 001e B7EE080A 		vmov.f32	s0, #1.5e+0
+  62              	.LVL6:
+  63              		.loc 1 226 16 view .LVU14
+  64 0022 30EE670A 		vsub.f32	s0, s0, s15
+  65              	.LVL7:
+ 227:moudels/algorithm/MahonyAHRS.c **** 	return y;
+  66              		.loc 1 227 2 is_stmt 1 view .LVU15
+ 228:moudels/algorithm/MahonyAHRS.c **** }
+  67              		.loc 1 228 1 is_stmt 0 view .LVU16
+  68 0026 27EE000A 		vmul.f32	s0, s14, s0
+  69 002a 7047     		bx	lr
+  70              	.L3:
+  71              		.align	2
+  72              	.L2:
+  73 002c DF59375F 		.word	1597463007
+  74              		.cfi_endproc
+  75              	.LFE2:
+  77              		.section	.text.MahonyAHRSupdateIMU,"ax",%progbits
+  78              		.align	1
+  79              		.global	MahonyAHRSupdateIMU
+  80              		.syntax unified
+  81              		.thumb
+  82              		.thumb_func
+  84              	MahonyAHRSupdateIMU:
+  85              	.LVL8:
+  86              	.LFB1:
+ 150:moudels/algorithm/MahonyAHRS.c **** 	float recipNorm;
+  87              		.loc 1 150 98 is_stmt 1 view -0
+  88              		.cfi_startproc
+  89              		@ args = 0, pretend = 0, frame = 0
+  90              		@ frame_needed = 0, uses_anonymous_args = 0
+ 150:moudels/algorithm/MahonyAHRS.c **** 	float recipNorm;
+  91              		.loc 1 150 98 is_stmt 0 view .LVU18
+  92 0000 10B5     		push	{r4, lr}
+  93              		.cfi_def_cfa_offset 8
+  94              		.cfi_offset 4, -8
+  95              		.cfi_offset 14, -4
+  96 0002 2DED068B 		vpush.64	{d8, d9, d10}
+  97              		.cfi_def_cfa_offset 32
+  98              		.cfi_offset 80, -32
+  99              		.cfi_offset 81, -28
+ 100              		.cfi_offset 82, -24
+ 101              		.cfi_offset 83, -20
+ 102              		.cfi_offset 84, -16
+ 103              		.cfi_offset 85, -12
+ 104 0006 0446     		mov	r4, r0
+ 105 0008 B0EE409A 		vmov.f32	s18, s0
+ 106 000c F0EE609A 		vmov.f32	s19, s1
+ 107 0010 B0EE418A 		vmov.f32	s16, s2
+ 108 0014 F0EE618A 		vmov.f32	s17, s3
+ 109 0018 B0EE42AA 		vmov.f32	s20, s4
+ 110 001c F0EE62AA 		vmov.f32	s21, s5
+ 151:moudels/algorithm/MahonyAHRS.c **** 	float halfvx, halfvy, halfvz;
+ 111              		.loc 1 151 2 is_stmt 1 view .LVU19
+ 152:moudels/algorithm/MahonyAHRS.c **** 	float halfex, halfey, halfez;
+ 112              		.loc 1 152 2 view .LVU20
+ 153:moudels/algorithm/MahonyAHRS.c **** 	float qa, qb, qc;
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 7
+
+
+ 113              		.loc 1 153 2 view .LVU21
+ 154:moudels/algorithm/MahonyAHRS.c **** 
+ 114              		.loc 1 154 2 view .LVU22
+ 157:moudels/algorithm/MahonyAHRS.c **** 
+ 115              		.loc 1 157 2 view .LVU23
+ 157:moudels/algorithm/MahonyAHRS.c **** 
+ 116              		.loc 1 157 4 is_stmt 0 view .LVU24
+ 117 0020 F5EE401A 		vcmp.f32	s3, #0
+ 118 0024 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 119 0028 0AD1     		bne	.L5
+ 157:moudels/algorithm/MahonyAHRS.c **** 
+ 120              		.loc 1 157 20 discriminator 1 view .LVU25
+ 121 002a B5EE402A 		vcmp.f32	s4, #0
+ 122 002e F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 123 0032 05D1     		bne	.L5
+ 157:moudels/algorithm/MahonyAHRS.c **** 
+ 124              		.loc 1 157 5 discriminator 2 view .LVU26
+ 125 0034 F5EE402A 		vcmp.f32	s5, #0
+ 126 0038 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 127 003c 00F09380 		beq	.L6
+ 128              	.L5:
+ 160:moudels/algorithm/MahonyAHRS.c **** 		ax *= recipNorm;
+ 129              		.loc 1 160 3 is_stmt 1 view .LVU27
+ 160:moudels/algorithm/MahonyAHRS.c **** 		ax *= recipNorm;
+ 130              		.loc 1 160 26 is_stmt 0 view .LVU28
+ 131 0040 68EEA87A 		vmul.f32	s15, s17, s17
+ 160:moudels/algorithm/MahonyAHRS.c **** 		ax *= recipNorm;
+ 132              		.loc 1 160 36 view .LVU29
+ 133 0044 2AEE0A7A 		vmul.f32	s14, s20, s20
+ 160:moudels/algorithm/MahonyAHRS.c **** 		ax *= recipNorm;
+ 134              		.loc 1 160 31 view .LVU30
+ 135 0048 77EE877A 		vadd.f32	s15, s15, s14
+ 160:moudels/algorithm/MahonyAHRS.c **** 		ax *= recipNorm;
+ 136              		.loc 1 160 46 view .LVU31
+ 137 004c 2AEEAA0A 		vmul.f32	s0, s21, s21
+ 138              	.LVL9:
+ 160:moudels/algorithm/MahonyAHRS.c **** 		ax *= recipNorm;
+ 139              		.loc 1 160 15 view .LVU32
+ 140 0050 37EE800A 		vadd.f32	s0, s15, s0
+ 141 0054 FFF7FEFF 		bl	invSqrt
+ 142              	.LVL10:
+ 161:moudels/algorithm/MahonyAHRS.c **** 		ay *= recipNorm;
+ 143              		.loc 1 161 3 is_stmt 1 view .LVU33
+ 161:moudels/algorithm/MahonyAHRS.c **** 		ay *= recipNorm;
+ 144              		.loc 1 161 6 is_stmt 0 view .LVU34
+ 145 0058 68EE808A 		vmul.f32	s17, s17, s0
+ 146              	.LVL11:
+ 162:moudels/algorithm/MahonyAHRS.c **** 		az *= recipNorm;        
+ 147              		.loc 1 162 3 is_stmt 1 view .LVU35
+ 162:moudels/algorithm/MahonyAHRS.c **** 		az *= recipNorm;        
+ 148              		.loc 1 162 6 is_stmt 0 view .LVU36
+ 149 005c 2AEE00AA 		vmul.f32	s20, s20, s0
+ 150              	.LVL12:
+ 163:moudels/algorithm/MahonyAHRS.c **** 
+ 151              		.loc 1 163 3 is_stmt 1 view .LVU37
+ 163:moudels/algorithm/MahonyAHRS.c **** 
+ 152              		.loc 1 163 6 is_stmt 0 view .LVU38
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 8
+
+
+ 153 0060 6AEE80AA 		vmul.f32	s21, s21, s0
+ 154              	.LVL13:
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 155              		.loc 1 166 3 is_stmt 1 view .LVU39
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 156              		.loc 1 166 13 is_stmt 0 view .LVU40
+ 157 0064 94ED017A 		vldr.32	s14, [r4, #4]
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 158              		.loc 1 166 20 view .LVU41
+ 159 0068 D4ED036A 		vldr.32	s13, [r4, #12]
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 160              		.loc 1 166 17 view .LVU42
+ 161 006c 27EE266A 		vmul.f32	s12, s14, s13
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 162              		.loc 1 166 27 view .LVU43
+ 163 0070 D4ED007A 		vldr.32	s15, [r4]
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 164              		.loc 1 166 34 view .LVU44
+ 165 0074 D4ED025A 		vldr.32	s11, [r4, #8]
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 166              		.loc 1 166 31 view .LVU45
+ 167 0078 27EEA55A 		vmul.f32	s10, s15, s11
+ 166:moudels/algorithm/MahonyAHRS.c **** 		halfvy = q[0] * q[1] + q[2] * q[3];
+ 168              		.loc 1 166 10 view .LVU46
+ 169 007c 36EE456A 		vsub.f32	s12, s12, s10
+ 170              	.LVL14:
+ 167:moudels/algorithm/MahonyAHRS.c **** 		halfvz = q[0] * q[0] - 0.5f + q[3] * q[3];
+ 171              		.loc 1 167 3 is_stmt 1 view .LVU47
+ 167:moudels/algorithm/MahonyAHRS.c **** 		halfvz = q[0] * q[0] - 0.5f + q[3] * q[3];
+ 172              		.loc 1 167 17 is_stmt 0 view .LVU48
+ 173 0080 27EE277A 		vmul.f32	s14, s14, s15
+ 167:moudels/algorithm/MahonyAHRS.c **** 		halfvz = q[0] * q[0] - 0.5f + q[3] * q[3];
+ 174              		.loc 1 167 31 view .LVU49
+ 175 0084 66EEA55A 		vmul.f32	s11, s13, s11
+ 167:moudels/algorithm/MahonyAHRS.c **** 		halfvz = q[0] * q[0] - 0.5f + q[3] * q[3];
+ 176              		.loc 1 167 10 view .LVU50
+ 177 0088 37EE257A 		vadd.f32	s14, s14, s11
+ 178              	.LVL15:
+ 168:moudels/algorithm/MahonyAHRS.c **** 	
+ 179              		.loc 1 168 3 is_stmt 1 view .LVU51
+ 168:moudels/algorithm/MahonyAHRS.c **** 	
+ 180              		.loc 1 168 17 is_stmt 0 view .LVU52
+ 181 008c 67EEA77A 		vmul.f32	s15, s15, s15
+ 168:moudels/algorithm/MahonyAHRS.c **** 	
+ 182              		.loc 1 168 24 view .LVU53
+ 183 0090 F6EE005A 		vmov.f32	s11, #5.0e-1
+ 184 0094 77EEE57A 		vsub.f32	s15, s15, s11
+ 168:moudels/algorithm/MahonyAHRS.c **** 	
+ 185              		.loc 1 168 38 view .LVU54
+ 186 0098 66EEA66A 		vmul.f32	s13, s13, s13
+ 168:moudels/algorithm/MahonyAHRS.c **** 	
+ 187              		.loc 1 168 10 view .LVU55
+ 188 009c 77EEA67A 		vadd.f32	s15, s15, s13
+ 189              	.LVL16:
+ 171:moudels/algorithm/MahonyAHRS.c **** 		halfey = (az * halfvx - ax * halfvz);
+ 190              		.loc 1 171 3 is_stmt 1 view .LVU56
+ 171:moudels/algorithm/MahonyAHRS.c **** 		halfey = (az * halfvx - ax * halfvz);
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 9
+
+
+ 191              		.loc 1 171 16 is_stmt 0 view .LVU57
+ 192 00a0 6AEE275A 		vmul.f32	s11, s20, s15
+ 171:moudels/algorithm/MahonyAHRS.c **** 		halfey = (az * halfvx - ax * halfvz);
+ 193              		.loc 1 171 30 view .LVU58
+ 194 00a4 6AEE876A 		vmul.f32	s13, s21, s14
+ 171:moudels/algorithm/MahonyAHRS.c **** 		halfey = (az * halfvx - ax * halfvz);
+ 195              		.loc 1 171 10 view .LVU59
+ 196 00a8 75EEE65A 		vsub.f32	s11, s11, s13
+ 197              	.LVL17:
+ 172:moudels/algorithm/MahonyAHRS.c **** 		halfez = (ax * halfvy - ay * halfvx);
+ 198              		.loc 1 172 3 is_stmt 1 view .LVU60
+ 172:moudels/algorithm/MahonyAHRS.c **** 		halfez = (ax * halfvy - ay * halfvx);
+ 199              		.loc 1 172 16 is_stmt 0 view .LVU61
+ 200 00ac 6AEE86AA 		vmul.f32	s21, s21, s12
+ 201              	.LVL18:
+ 172:moudels/algorithm/MahonyAHRS.c **** 		halfez = (ax * halfvy - ay * halfvx);
+ 202              		.loc 1 172 30 view .LVU62
+ 203 00b0 68EEA77A 		vmul.f32	s15, s17, s15
+ 204              	.LVL19:
+ 172:moudels/algorithm/MahonyAHRS.c **** 		halfez = (ax * halfvy - ay * halfvx);
+ 205              		.loc 1 172 10 view .LVU63
+ 206 00b4 7AEEE7AA 		vsub.f32	s21, s21, s15
+ 207              	.LVL20:
+ 173:moudels/algorithm/MahonyAHRS.c **** 
+ 208              		.loc 1 173 3 is_stmt 1 view .LVU64
+ 173:moudels/algorithm/MahonyAHRS.c **** 
+ 209              		.loc 1 173 16 is_stmt 0 view .LVU65
+ 210 00b8 68EE878A 		vmul.f32	s17, s17, s14
+ 211              	.LVL21:
+ 173:moudels/algorithm/MahonyAHRS.c **** 
+ 212              		.loc 1 173 30 view .LVU66
+ 213 00bc 2AEE06AA 		vmul.f32	s20, s20, s12
+ 214              	.LVL22:
+ 173:moudels/algorithm/MahonyAHRS.c **** 
+ 215              		.loc 1 173 10 view .LVU67
+ 216 00c0 78EECA8A 		vsub.f32	s17, s17, s20
+ 217              	.LVL23:
+ 176:moudels/algorithm/MahonyAHRS.c **** 			integralFBx += twoKi * halfex * (1.0f / sampleFreq);	// integral error scaled by Ki
+ 218              		.loc 1 176 3 is_stmt 1 view .LVU68
+ 176:moudels/algorithm/MahonyAHRS.c **** 			integralFBx += twoKi * halfex * (1.0f / sampleFreq);	// integral error scaled by Ki
+ 219              		.loc 1 176 12 is_stmt 0 view .LVU69
+ 220 00c4 614B     		ldr	r3, .L13
+ 221 00c6 D3ED007A 		vldr.32	s15, [r3]
+ 176:moudels/algorithm/MahonyAHRS.c **** 			integralFBx += twoKi * halfex * (1.0f / sampleFreq);	// integral error scaled by Ki
+ 222              		.loc 1 176 5 view .LVU70
+ 223 00ca F5EEC07A 		vcmpe.f32	s15, #0
+ 224 00ce F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 225 00d2 40F3B380 		ble	.L11
+ 177:moudels/algorithm/MahonyAHRS.c **** 			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
+ 226              		.loc 1 177 4 is_stmt 1 view .LVU71
+ 177:moudels/algorithm/MahonyAHRS.c **** 			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
+ 227              		.loc 1 177 25 is_stmt 0 view .LVU72
+ 228 00d6 D3ED007A 		vldr.32	s15, [r3]
+ 229 00da 67EEA57A 		vmul.f32	s15, s15, s11
+ 177:moudels/algorithm/MahonyAHRS.c **** 			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
+ 230              		.loc 1 177 34 view .LVU73
+ 231 00de 9FED5C7A 		vldr.32	s14, .L13+4
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 10
+
+
+ 232              	.LVL24:
+ 177:moudels/algorithm/MahonyAHRS.c **** 			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
+ 233              		.loc 1 177 34 view .LVU74
+ 234 00e2 67EE877A 		vmul.f32	s15, s15, s14
+ 177:moudels/algorithm/MahonyAHRS.c **** 			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
+ 235              		.loc 1 177 16 view .LVU75
+ 236 00e6 5B49     		ldr	r1, .L13+8
+ 237 00e8 D1ED006A 		vldr.32	s13, [r1]
+ 238 00ec 76EEA77A 		vadd.f32	s15, s13, s15
+ 239 00f0 C1ED007A 		vstr.32	s15, [r1]
+ 240              	.LVL25:
+ 178:moudels/algorithm/MahonyAHRS.c **** 			integralFBz += twoKi * halfez * (1.0f / sampleFreq);
+ 241              		.loc 1 178 4 is_stmt 1 view .LVU76
+ 178:moudels/algorithm/MahonyAHRS.c **** 			integralFBz += twoKi * halfez * (1.0f / sampleFreq);
+ 242              		.loc 1 178 25 is_stmt 0 view .LVU77
+ 243 00f4 D3ED007A 		vldr.32	s15, [r3]
+ 244 00f8 67EEAA7A 		vmul.f32	s15, s15, s21
+ 178:moudels/algorithm/MahonyAHRS.c **** 			integralFBz += twoKi * halfez * (1.0f / sampleFreq);
+ 245              		.loc 1 178 34 view .LVU78
+ 246 00fc 67EE877A 		vmul.f32	s15, s15, s14
+ 178:moudels/algorithm/MahonyAHRS.c **** 			integralFBz += twoKi * halfez * (1.0f / sampleFreq);
+ 247              		.loc 1 178 16 view .LVU79
+ 248 0100 554A     		ldr	r2, .L13+12
+ 249 0102 D2ED006A 		vldr.32	s13, [r2]
+ 250 0106 76EEA77A 		vadd.f32	s15, s13, s15
+ 251 010a C2ED007A 		vstr.32	s15, [r2]
+ 179:moudels/algorithm/MahonyAHRS.c **** 			gx += integralFBx;	// apply integral feedback
+ 252              		.loc 1 179 4 is_stmt 1 view .LVU80
+ 179:moudels/algorithm/MahonyAHRS.c **** 			gx += integralFBx;	// apply integral feedback
+ 253              		.loc 1 179 25 is_stmt 0 view .LVU81
+ 254 010e D3ED007A 		vldr.32	s15, [r3]
+ 255 0112 67EEA87A 		vmul.f32	s15, s15, s17
+ 179:moudels/algorithm/MahonyAHRS.c **** 			gx += integralFBx;	// apply integral feedback
+ 256              		.loc 1 179 34 view .LVU82
+ 257 0116 67EE877A 		vmul.f32	s15, s15, s14
+ 179:moudels/algorithm/MahonyAHRS.c **** 			gx += integralFBx;	// apply integral feedback
+ 258              		.loc 1 179 16 view .LVU83
+ 259 011a 504B     		ldr	r3, .L13+16
+ 260 011c 93ED007A 		vldr.32	s14, [r3]
+ 261 0120 77EE277A 		vadd.f32	s15, s14, s15
+ 262 0124 C3ED007A 		vstr.32	s15, [r3]
+ 180:moudels/algorithm/MahonyAHRS.c **** 			gy += integralFBy;
+ 263              		.loc 1 180 4 is_stmt 1 view .LVU84
+ 264 0128 D1ED007A 		vldr.32	s15, [r1]
+ 180:moudels/algorithm/MahonyAHRS.c **** 			gy += integralFBy;
+ 265              		.loc 1 180 7 is_stmt 0 view .LVU85
+ 266 012c 39EE279A 		vadd.f32	s18, s18, s15
+ 267              	.LVL26:
+ 181:moudels/algorithm/MahonyAHRS.c **** 			gz += integralFBz;
+ 268              		.loc 1 181 4 is_stmt 1 view .LVU86
+ 269 0130 D2ED007A 		vldr.32	s15, [r2]
+ 181:moudels/algorithm/MahonyAHRS.c **** 			gz += integralFBz;
+ 270              		.loc 1 181 7 is_stmt 0 view .LVU87
+ 271 0134 79EEA79A 		vadd.f32	s19, s19, s15
+ 272              	.LVL27:
+ 182:moudels/algorithm/MahonyAHRS.c **** 		}
+ 273              		.loc 1 182 4 is_stmt 1 view .LVU88
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 11
+
+
+ 274 0138 D3ED007A 		vldr.32	s15, [r3]
+ 182:moudels/algorithm/MahonyAHRS.c **** 		}
+ 275              		.loc 1 182 7 is_stmt 0 view .LVU89
+ 276 013c 38EE278A 		vadd.f32	s16, s16, s15
+ 277              	.LVL28:
+ 278              	.L9:
+ 191:moudels/algorithm/MahonyAHRS.c **** 		gy += twoKp * halfey;
+ 279              		.loc 1 191 3 is_stmt 1 view .LVU90
+ 191:moudels/algorithm/MahonyAHRS.c **** 		gy += twoKp * halfey;
+ 280              		.loc 1 191 15 is_stmt 0 view .LVU91
+ 281 0140 474B     		ldr	r3, .L13+20
+ 282 0142 D3ED007A 		vldr.32	s15, [r3]
+ 283 0146 67EEA57A 		vmul.f32	s15, s15, s11
+ 191:moudels/algorithm/MahonyAHRS.c **** 		gy += twoKp * halfey;
+ 284              		.loc 1 191 6 view .LVU92
+ 285 014a 39EE279A 		vadd.f32	s18, s18, s15
+ 286              	.LVL29:
+ 192:moudels/algorithm/MahonyAHRS.c **** 		gz += twoKp * halfez;
+ 287              		.loc 1 192 3 is_stmt 1 view .LVU93
+ 192:moudels/algorithm/MahonyAHRS.c **** 		gz += twoKp * halfez;
+ 288              		.loc 1 192 15 is_stmt 0 view .LVU94
+ 289 014e D3ED007A 		vldr.32	s15, [r3]
+ 290 0152 67EEAAAA 		vmul.f32	s21, s15, s21
+ 291              	.LVL30:
+ 192:moudels/algorithm/MahonyAHRS.c **** 		gz += twoKp * halfez;
+ 292              		.loc 1 192 6 view .LVU95
+ 293 0156 79EEAA9A 		vadd.f32	s19, s19, s21
+ 294              	.LVL31:
+ 193:moudels/algorithm/MahonyAHRS.c **** 	}
+ 295              		.loc 1 193 3 is_stmt 1 view .LVU96
+ 193:moudels/algorithm/MahonyAHRS.c **** 	}
+ 296              		.loc 1 193 15 is_stmt 0 view .LVU97
+ 297 015a D3ED007A 		vldr.32	s15, [r3]
+ 298 015e 67EEA87A 		vmul.f32	s15, s15, s17
+ 193:moudels/algorithm/MahonyAHRS.c **** 	}
+ 299              		.loc 1 193 6 view .LVU98
+ 300 0162 38EE278A 		vadd.f32	s16, s16, s15
+ 301              	.LVL32:
+ 302              	.L6:
+ 197:moudels/algorithm/MahonyAHRS.c **** 	gy *= (0.5f * (1.0f / sampleFreq));
+ 303              		.loc 1 197 2 is_stmt 1 view .LVU99
+ 197:moudels/algorithm/MahonyAHRS.c **** 	gy *= (0.5f * (1.0f / sampleFreq));
+ 304              		.loc 1 197 5 is_stmt 0 view .LVU100
+ 305 0166 DFED3F7A 		vldr.32	s15, .L13+24
+ 306 016a 29EE270A 		vmul.f32	s0, s18, s15
+ 307              	.LVL33:
+ 198:moudels/algorithm/MahonyAHRS.c **** 	gz *= (0.5f * (1.0f / sampleFreq));
+ 308              		.loc 1 198 2 is_stmt 1 view .LVU101
+ 198:moudels/algorithm/MahonyAHRS.c **** 	gz *= (0.5f * (1.0f / sampleFreq));
+ 309              		.loc 1 198 5 is_stmt 0 view .LVU102
+ 310 016e 69EEA70A 		vmul.f32	s1, s19, s15
+ 311              	.LVL34:
+ 199:moudels/algorithm/MahonyAHRS.c **** 	qa = q[0];
+ 312              		.loc 1 199 2 is_stmt 1 view .LVU103
+ 199:moudels/algorithm/MahonyAHRS.c **** 	qa = q[0];
+ 313              		.loc 1 199 5 is_stmt 0 view .LVU104
+ 314 0172 28EE271A 		vmul.f32	s2, s16, s15
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 12
+
+
+ 315              	.LVL35:
+ 200:moudels/algorithm/MahonyAHRS.c **** 	qb = q[1];
+ 316              		.loc 1 200 2 is_stmt 1 view .LVU105
+ 200:moudels/algorithm/MahonyAHRS.c **** 	qb = q[1];
+ 317              		.loc 1 200 5 is_stmt 0 view .LVU106
+ 318 0176 D4ED006A 		vldr.32	s13, [r4]
+ 319              	.LVL36:
+ 201:moudels/algorithm/MahonyAHRS.c **** 	qc = q[2];
+ 320              		.loc 1 201 2 is_stmt 1 view .LVU107
+ 201:moudels/algorithm/MahonyAHRS.c **** 	qc = q[2];
+ 321              		.loc 1 201 5 is_stmt 0 view .LVU108
+ 322 017a 94ED017A 		vldr.32	s14, [r4, #4]
+ 323              	.LVL37:
+ 202:moudels/algorithm/MahonyAHRS.c **** 	q[0] += (-qb * gx - qc * gy - q[3] * gz);
+ 324              		.loc 1 202 2 is_stmt 1 view .LVU109
+ 202:moudels/algorithm/MahonyAHRS.c **** 	q[0] += (-qb * gx - qc * gy - q[3] * gz);
+ 325              		.loc 1 202 5 is_stmt 0 view .LVU110
+ 326 017e D4ED027A 		vldr.32	s15, [r4, #8]
+ 327              	.LVL38:
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 328              		.loc 1 203 2 is_stmt 1 view .LVU111
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 329              		.loc 1 203 15 is_stmt 0 view .LVU112
+ 330 0182 27EE409A 		vnmul.f32	s18, s14, s0
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 331              		.loc 1 203 25 view .LVU113
+ 332 0186 20EEA76A 		vmul.f32	s12, s1, s15
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 333              		.loc 1 203 20 view .LVU114
+ 334 018a 39EE469A 		vsub.f32	s18, s18, s12
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 335              		.loc 1 203 33 view .LVU115
+ 336 018e D4ED039A 		vldr.32	s19, [r4, #12]
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 337              		.loc 1 203 37 view .LVU116
+ 338 0192 29EE816A 		vmul.f32	s12, s19, s2
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 339              		.loc 1 203 30 view .LVU117
+ 340 0196 39EE469A 		vsub.f32	s18, s18, s12
+ 203:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 341              		.loc 1 203 7 view .LVU118
+ 342 019a 39EE269A 		vadd.f32	s18, s18, s13
+ 343 019e 84ED009A 		vstr.32	s18, [r4]
+ 204:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 344              		.loc 1 204 2 is_stmt 1 view .LVU119
+ 204:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 345              		.loc 1 204 14 is_stmt 0 view .LVU120
+ 346 01a2 60EE268A 		vmul.f32	s17, s0, s13
+ 204:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 347              		.loc 1 204 24 view .LVU121
+ 348 01a6 21EE276A 		vmul.f32	s12, s2, s15
+ 204:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 349              		.loc 1 204 19 view .LVU122
+ 350 01aa 78EE868A 		vadd.f32	s17, s17, s12
+ 204:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 351              		.loc 1 204 36 view .LVU123
+ 352 01ae 29EEA06A 		vmul.f32	s12, s19, s1
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 13
+
+
+ 204:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 353              		.loc 1 204 29 view .LVU124
+ 354 01b2 78EEC68A 		vsub.f32	s17, s17, s12
+ 204:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 355              		.loc 1 204 7 view .LVU125
+ 356 01b6 78EE878A 		vadd.f32	s17, s17, s14
+ 357 01ba C4ED018A 		vstr.32	s17, [r4, #4]
+ 205:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 358              		.loc 1 205 2 is_stmt 1 view .LVU126
+ 205:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 359              		.loc 1 205 14 is_stmt 0 view .LVU127
+ 360 01be 20EEA68A 		vmul.f32	s16, s1, s13
+ 205:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 361              		.loc 1 205 24 view .LVU128
+ 362 01c2 21EE076A 		vmul.f32	s12, s2, s14
+ 205:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 363              		.loc 1 205 19 view .LVU129
+ 364 01c6 38EE468A 		vsub.f32	s16, s16, s12
+ 205:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 365              		.loc 1 205 36 view .LVU130
+ 366 01ca 29EE806A 		vmul.f32	s12, s19, s0
+ 205:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 367              		.loc 1 205 29 view .LVU131
+ 368 01ce 38EE068A 		vadd.f32	s16, s16, s12
+ 205:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 369              		.loc 1 205 7 view .LVU132
+ 370 01d2 38EE278A 		vadd.f32	s16, s16, s15
+ 371 01d6 84ED028A 		vstr.32	s16, [r4, #8]
+ 206:moudels/algorithm/MahonyAHRS.c **** 	
+ 372              		.loc 1 206 2 is_stmt 1 view .LVU133
+ 206:moudels/algorithm/MahonyAHRS.c **** 	
+ 373              		.loc 1 206 14 is_stmt 0 view .LVU134
+ 374 01da 21EE261A 		vmul.f32	s2, s2, s13
+ 375              	.LVL39:
+ 206:moudels/algorithm/MahonyAHRS.c **** 	
+ 376              		.loc 1 206 24 view .LVU135
+ 377 01de 60EE870A 		vmul.f32	s1, s1, s14
+ 378              	.LVL40:
+ 206:moudels/algorithm/MahonyAHRS.c **** 	
+ 379              		.loc 1 206 19 view .LVU136
+ 380 01e2 31EE201A 		vadd.f32	s2, s2, s1
+ 206:moudels/algorithm/MahonyAHRS.c **** 	
+ 381              		.loc 1 206 34 view .LVU137
+ 382 01e6 20EE270A 		vmul.f32	s0, s0, s15
+ 383              	.LVL41:
+ 206:moudels/algorithm/MahonyAHRS.c **** 	
+ 384              		.loc 1 206 29 view .LVU138
+ 385 01ea 31EE401A 		vsub.f32	s2, s2, s0
+ 206:moudels/algorithm/MahonyAHRS.c **** 	
+ 386              		.loc 1 206 7 view .LVU139
+ 387 01ee 79EE819A 		vadd.f32	s19, s19, s2
+ 388 01f2 C4ED039A 		vstr.32	s19, [r4, #12]
+ 209:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 389              		.loc 1 209 2 is_stmt 1 view .LVU140
+ 209:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 390              		.loc 1 209 27 is_stmt 0 view .LVU141
+ 391 01f6 69EE097A 		vmul.f32	s15, s18, s18
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 14
+
+
+ 392              	.LVL42:
+ 209:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 393              		.loc 1 209 41 view .LVU142
+ 394 01fa 28EEA87A 		vmul.f32	s14, s17, s17
+ 395              	.LVL43:
+ 209:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 396              		.loc 1 209 34 view .LVU143
+ 397 01fe 77EE877A 		vadd.f32	s15, s15, s14
+ 209:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 398              		.loc 1 209 55 view .LVU144
+ 399 0202 28EE087A 		vmul.f32	s14, s16, s16
+ 209:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 400              		.loc 1 209 48 view .LVU145
+ 401 0206 77EE877A 		vadd.f32	s15, s15, s14
+ 209:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 402              		.loc 1 209 69 view .LVU146
+ 403 020a 29EEA90A 		vmul.f32	s0, s19, s19
+ 209:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 404              		.loc 1 209 14 view .LVU147
+ 405 020e 37EE800A 		vadd.f32	s0, s15, s0
+ 406 0212 FFF7FEFF 		bl	invSqrt
+ 407              	.LVL44:
+ 210:moudels/algorithm/MahonyAHRS.c **** 	q[1] *= recipNorm;
+ 408              		.loc 1 210 2 is_stmt 1 view .LVU148
+ 210:moudels/algorithm/MahonyAHRS.c **** 	q[1] *= recipNorm;
+ 409              		.loc 1 210 7 is_stmt 0 view .LVU149
+ 410 0216 29EE009A 		vmul.f32	s18, s18, s0
+ 411 021a 84ED009A 		vstr.32	s18, [r4]
+ 211:moudels/algorithm/MahonyAHRS.c **** 	q[2] *= recipNorm;
+ 412              		.loc 1 211 2 is_stmt 1 view .LVU150
+ 211:moudels/algorithm/MahonyAHRS.c **** 	q[2] *= recipNorm;
+ 413              		.loc 1 211 7 is_stmt 0 view .LVU151
+ 414 021e 68EE808A 		vmul.f32	s17, s17, s0
+ 415 0222 C4ED018A 		vstr.32	s17, [r4, #4]
+ 212:moudels/algorithm/MahonyAHRS.c **** 	q[3] *= recipNorm;
+ 416              		.loc 1 212 2 is_stmt 1 view .LVU152
+ 212:moudels/algorithm/MahonyAHRS.c **** 	q[3] *= recipNorm;
+ 417              		.loc 1 212 7 is_stmt 0 view .LVU153
+ 418 0226 28EE008A 		vmul.f32	s16, s16, s0
+ 419 022a 84ED028A 		vstr.32	s16, [r4, #8]
+ 213:moudels/algorithm/MahonyAHRS.c **** }
+ 420              		.loc 1 213 2 is_stmt 1 view .LVU154
+ 213:moudels/algorithm/MahonyAHRS.c **** }
+ 421              		.loc 1 213 7 is_stmt 0 view .LVU155
+ 422 022e 69EE809A 		vmul.f32	s19, s19, s0
+ 423 0232 C4ED039A 		vstr.32	s19, [r4, #12]
+ 214:moudels/algorithm/MahonyAHRS.c **** 
+ 424              		.loc 1 214 1 view .LVU156
+ 425 0236 BDEC068B 		vldm	sp!, {d8-d10}
+ 426              		.cfi_remember_state
+ 427              		.cfi_restore 84
+ 428              		.cfi_restore 85
+ 429              		.cfi_restore 82
+ 430              		.cfi_restore 83
+ 431              		.cfi_restore 80
+ 432              		.cfi_restore 81
+ 433              		.cfi_def_cfa_offset 8
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 15
+
+
+ 434 023a 10BD     		pop	{r4, pc}
+ 435              	.LVL45:
+ 436              	.L11:
+ 437              		.cfi_restore_state
+ 185:moudels/algorithm/MahonyAHRS.c **** 			integralFBy = 0.0f;
+ 438              		.loc 1 185 4 is_stmt 1 view .LVU157
+ 185:moudels/algorithm/MahonyAHRS.c **** 			integralFBy = 0.0f;
+ 439              		.loc 1 185 16 is_stmt 0 view .LVU158
+ 440 023c 0023     		movs	r3, #0
+ 441 023e 054A     		ldr	r2, .L13+8
+ 442 0240 1360     		str	r3, [r2]	@ float
+ 443              	.LVL46:
+ 186:moudels/algorithm/MahonyAHRS.c **** 			integralFBz = 0.0f;
+ 444              		.loc 1 186 4 is_stmt 1 view .LVU159
+ 186:moudels/algorithm/MahonyAHRS.c **** 			integralFBz = 0.0f;
+ 445              		.loc 1 186 16 is_stmt 0 view .LVU160
+ 446 0242 054A     		ldr	r2, .L13+12
+ 447 0244 1360     		str	r3, [r2]	@ float
+ 187:moudels/algorithm/MahonyAHRS.c **** 		}
+ 448              		.loc 1 187 4 is_stmt 1 view .LVU161
+ 187:moudels/algorithm/MahonyAHRS.c **** 		}
+ 449              		.loc 1 187 16 is_stmt 0 view .LVU162
+ 450 0246 054A     		ldr	r2, .L13+16
+ 451 0248 1360     		str	r3, [r2]	@ float
+ 452 024a 79E7     		b	.L9
+ 453              	.L14:
+ 454              		.align	2
+ 455              	.L13:
+ 456 024c 00000000 		.word	twoKi
+ 457 0250 6F12833A 		.word	981668463
+ 458 0254 00000000 		.word	integralFBx
+ 459 0258 00000000 		.word	integralFBy
+ 460 025c 00000000 		.word	integralFBz
+ 461 0260 00000000 		.word	twoKp
+ 462 0264 6F12033A 		.word	973279855
+ 463              		.cfi_endproc
+ 464              	.LFE1:
+ 466              		.section	.text.MahonyAHRSupdate,"ax",%progbits
+ 467              		.align	1
+ 468              		.global	MahonyAHRSupdate
+ 469              		.syntax unified
+ 470              		.thumb
+ 471              		.thumb_func
+ 473              	MahonyAHRSupdate:
+ 474              	.LVL47:
+ 475              	.LFB0:
+  46:moudels/algorithm/MahonyAHRS.c **** 	float recipNorm;
+ 476              		.loc 1 46 125 is_stmt 1 view -0
+ 477              		.cfi_startproc
+ 478              		@ args = 0, pretend = 0, frame = 0
+ 479              		@ frame_needed = 0, uses_anonymous_args = 0
+  46:moudels/algorithm/MahonyAHRS.c **** 	float recipNorm;
+ 480              		.loc 1 46 125 is_stmt 0 view .LVU164
+ 481 0000 10B5     		push	{r4, lr}
+ 482              		.cfi_def_cfa_offset 8
+ 483              		.cfi_offset 4, -8
+ 484              		.cfi_offset 14, -4
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 16
+
+
+ 485 0002 2DED048B 		vpush.64	{d8, d9}
+ 486              		.cfi_def_cfa_offset 24
+ 487              		.cfi_offset 80, -24
+ 488              		.cfi_offset 81, -20
+ 489              		.cfi_offset 82, -16
+ 490              		.cfi_offset 83, -12
+ 491 0006 0446     		mov	r4, r0
+  47:moudels/algorithm/MahonyAHRS.c ****     // float q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;  
+ 492              		.loc 1 47 2 is_stmt 1 view .LVU165
+  52:moudels/algorithm/MahonyAHRS.c **** 
+ 493              		.loc 1 52 2 view .LVU166
+  55:moudels/algorithm/MahonyAHRS.c **** 		MahonyAHRSupdateIMU(q, gx, gy, gz, ax, ay, az);
+ 494              		.loc 1 55 2 view .LVU167
+  55:moudels/algorithm/MahonyAHRS.c **** 		MahonyAHRSupdateIMU(q, gx, gy, gz, ax, ay, az);
+ 495              		.loc 1 55 4 is_stmt 0 view .LVU168
+ 496 0008 B5EE403A 		vcmp.f32	s6, #0
+ 497 000c F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 498 0010 09D1     		bne	.L16
+  55:moudels/algorithm/MahonyAHRS.c **** 		MahonyAHRSupdateIMU(q, gx, gy, gz, ax, ay, az);
+ 499              		.loc 1 55 18 discriminator 1 view .LVU169
+ 500 0012 F5EE403A 		vcmp.f32	s7, #0
+ 501 0016 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 502 001a 04D1     		bne	.L16
+  55:moudels/algorithm/MahonyAHRS.c **** 		MahonyAHRSupdateIMU(q, gx, gy, gz, ax, ay, az);
+ 503              		.loc 1 55 34 discriminator 2 view .LVU170
+ 504 001c B5EE404A 		vcmp.f32	s8, #0
+ 505 0020 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 506 0024 6AD0     		beq	.L19
+ 507              	.L16:
+ 128:moudels/algorithm/MahonyAHRS.c **** 	gy *= (0.5f * (1.0f / sampleFreq));
+ 508              		.loc 1 128 2 is_stmt 1 view .LVU171
+ 128:moudels/algorithm/MahonyAHRS.c **** 	gy *= (0.5f * (1.0f / sampleFreq));
+ 509              		.loc 1 128 5 is_stmt 0 view .LVU172
+ 510 0026 DFED377A 		vldr.32	s15, .L20
+ 511 002a 20EE270A 		vmul.f32	s0, s0, s15
+ 512              	.LVL48:
+ 129:moudels/algorithm/MahonyAHRS.c **** 	gz *= (0.5f * (1.0f / sampleFreq));
+ 513              		.loc 1 129 2 is_stmt 1 view .LVU173
+ 129:moudels/algorithm/MahonyAHRS.c **** 	gz *= (0.5f * (1.0f / sampleFreq));
+ 514              		.loc 1 129 5 is_stmt 0 view .LVU174
+ 515 002e 60EEA70A 		vmul.f32	s1, s1, s15
+ 516              	.LVL49:
+ 130:moudels/algorithm/MahonyAHRS.c **** 	qa = q[0];
+ 517              		.loc 1 130 2 is_stmt 1 view .LVU175
+ 130:moudels/algorithm/MahonyAHRS.c **** 	qa = q[0];
+ 518              		.loc 1 130 5 is_stmt 0 view .LVU176
+ 519 0032 21EE271A 		vmul.f32	s2, s2, s15
+ 520              	.LVL50:
+ 131:moudels/algorithm/MahonyAHRS.c **** 	qb = q[1];
+ 521              		.loc 1 131 2 is_stmt 1 view .LVU177
+ 131:moudels/algorithm/MahonyAHRS.c **** 	qb = q[1];
+ 522              		.loc 1 131 5 is_stmt 0 view .LVU178
+ 523 0036 D4ED006A 		vldr.32	s13, [r4]
+ 524              	.LVL51:
+ 132:moudels/algorithm/MahonyAHRS.c **** 	qc = q[2];
+ 525              		.loc 1 132 2 is_stmt 1 view .LVU179
+ 132:moudels/algorithm/MahonyAHRS.c **** 	qc = q[2];
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 17
+
+
+ 526              		.loc 1 132 5 is_stmt 0 view .LVU180
+ 527 003a 94ED017A 		vldr.32	s14, [r4, #4]
+ 528              	.LVL52:
+ 133:moudels/algorithm/MahonyAHRS.c **** 	q[0] += (-qb * gx - qc * gy - q[3] * gz);
+ 529              		.loc 1 133 2 is_stmt 1 view .LVU181
+ 133:moudels/algorithm/MahonyAHRS.c **** 	q[0] += (-qb * gx - qc * gy - q[3] * gz);
+ 530              		.loc 1 133 5 is_stmt 0 view .LVU182
+ 531 003e D4ED027A 		vldr.32	s15, [r4, #8]
+ 532              	.LVL53:
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 533              		.loc 1 134 2 is_stmt 1 view .LVU183
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 534              		.loc 1 134 15 is_stmt 0 view .LVU184
+ 535 0042 27EE409A 		vnmul.f32	s18, s14, s0
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 536              		.loc 1 134 25 view .LVU185
+ 537 0046 20EEA76A 		vmul.f32	s12, s1, s15
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 538              		.loc 1 134 20 view .LVU186
+ 539 004a 39EE469A 		vsub.f32	s18, s18, s12
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 540              		.loc 1 134 33 view .LVU187
+ 541 004e D4ED039A 		vldr.32	s19, [r4, #12]
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 542              		.loc 1 134 37 view .LVU188
+ 543 0052 29EE816A 		vmul.f32	s12, s19, s2
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 544              		.loc 1 134 30 view .LVU189
+ 545 0056 39EE469A 		vsub.f32	s18, s18, s12
+ 134:moudels/algorithm/MahonyAHRS.c **** 	q[1] += (qa * gx + qc * gz - q[3] * gy);
+ 546              		.loc 1 134 7 view .LVU190
+ 547 005a 39EE269A 		vadd.f32	s18, s18, s13
+ 548 005e 84ED009A 		vstr.32	s18, [r4]
+ 135:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 549              		.loc 1 135 2 is_stmt 1 view .LVU191
+ 135:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 550              		.loc 1 135 14 is_stmt 0 view .LVU192
+ 551 0062 60EE268A 		vmul.f32	s17, s0, s13
+ 135:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 552              		.loc 1 135 24 view .LVU193
+ 553 0066 21EE276A 		vmul.f32	s12, s2, s15
+ 135:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 554              		.loc 1 135 19 view .LVU194
+ 555 006a 78EE868A 		vadd.f32	s17, s17, s12
+ 135:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 556              		.loc 1 135 36 view .LVU195
+ 557 006e 29EEA06A 		vmul.f32	s12, s19, s1
+ 135:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 558              		.loc 1 135 29 view .LVU196
+ 559 0072 78EEC68A 		vsub.f32	s17, s17, s12
+ 135:moudels/algorithm/MahonyAHRS.c **** 	q[2] += (qa * gy - qb * gz + q[3] * gx);
+ 560              		.loc 1 135 7 view .LVU197
+ 561 0076 78EE878A 		vadd.f32	s17, s17, s14
+ 562 007a C4ED018A 		vstr.32	s17, [r4, #4]
+ 136:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 563              		.loc 1 136 2 is_stmt 1 view .LVU198
+ 136:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 18
+
+
+ 564              		.loc 1 136 14 is_stmt 0 view .LVU199
+ 565 007e 20EEA68A 		vmul.f32	s16, s1, s13
+ 136:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 566              		.loc 1 136 24 view .LVU200
+ 567 0082 21EE076A 		vmul.f32	s12, s2, s14
+ 136:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 568              		.loc 1 136 19 view .LVU201
+ 569 0086 38EE468A 		vsub.f32	s16, s16, s12
+ 136:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 570              		.loc 1 136 36 view .LVU202
+ 571 008a 29EE806A 		vmul.f32	s12, s19, s0
+ 136:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 572              		.loc 1 136 29 view .LVU203
+ 573 008e 38EE068A 		vadd.f32	s16, s16, s12
+ 136:moudels/algorithm/MahonyAHRS.c **** 	q[3] += (qa * gz + qb * gy - qc * gx); 
+ 574              		.loc 1 136 7 view .LVU204
+ 575 0092 38EE278A 		vadd.f32	s16, s16, s15
+ 576 0096 84ED028A 		vstr.32	s16, [r4, #8]
+ 137:moudels/algorithm/MahonyAHRS.c **** 	
+ 577              		.loc 1 137 2 is_stmt 1 view .LVU205
+ 137:moudels/algorithm/MahonyAHRS.c **** 	
+ 578              		.loc 1 137 14 is_stmt 0 view .LVU206
+ 579 009a 21EE261A 		vmul.f32	s2, s2, s13
+ 580              	.LVL54:
+ 137:moudels/algorithm/MahonyAHRS.c **** 	
+ 581              		.loc 1 137 24 view .LVU207
+ 582 009e 60EE870A 		vmul.f32	s1, s1, s14
+ 583              	.LVL55:
+ 137:moudels/algorithm/MahonyAHRS.c **** 	
+ 584              		.loc 1 137 19 view .LVU208
+ 585 00a2 31EE201A 		vadd.f32	s2, s2, s1
+ 137:moudels/algorithm/MahonyAHRS.c **** 	
+ 586              		.loc 1 137 34 view .LVU209
+ 587 00a6 20EE270A 		vmul.f32	s0, s0, s15
+ 588              	.LVL56:
+ 137:moudels/algorithm/MahonyAHRS.c **** 	
+ 589              		.loc 1 137 29 view .LVU210
+ 590 00aa 31EE401A 		vsub.f32	s2, s2, s0
+ 137:moudels/algorithm/MahonyAHRS.c **** 	
+ 591              		.loc 1 137 7 view .LVU211
+ 592 00ae 79EE819A 		vadd.f32	s19, s19, s2
+ 593 00b2 C4ED039A 		vstr.32	s19, [r4, #12]
+ 140:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 594              		.loc 1 140 2 is_stmt 1 view .LVU212
+ 140:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 595              		.loc 1 140 27 is_stmt 0 view .LVU213
+ 596 00b6 69EE097A 		vmul.f32	s15, s18, s18
+ 597              	.LVL57:
+ 140:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 598              		.loc 1 140 41 view .LVU214
+ 599 00ba 28EEA87A 		vmul.f32	s14, s17, s17
+ 600              	.LVL58:
+ 140:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 601              		.loc 1 140 34 view .LVU215
+ 602 00be 77EE877A 		vadd.f32	s15, s15, s14
+ 140:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 603              		.loc 1 140 55 view .LVU216
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 19
+
+
+ 604 00c2 28EE087A 		vmul.f32	s14, s16, s16
+ 140:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 605              		.loc 1 140 48 view .LVU217
+ 606 00c6 77EE877A 		vadd.f32	s15, s15, s14
+ 140:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 607              		.loc 1 140 69 view .LVU218
+ 608 00ca 29EEA90A 		vmul.f32	s0, s19, s19
+ 140:moudels/algorithm/MahonyAHRS.c **** 	q[0] *= recipNorm;
+ 609              		.loc 1 140 14 view .LVU219
+ 610 00ce 37EE800A 		vadd.f32	s0, s15, s0
+ 611 00d2 FFF7FEFF 		bl	invSqrt
+ 612              	.LVL59:
+ 141:moudels/algorithm/MahonyAHRS.c **** 	q[1] *= recipNorm;
+ 613              		.loc 1 141 2 is_stmt 1 view .LVU220
+ 141:moudels/algorithm/MahonyAHRS.c **** 	q[1] *= recipNorm;
+ 614              		.loc 1 141 7 is_stmt 0 view .LVU221
+ 615 00d6 29EE009A 		vmul.f32	s18, s18, s0
+ 616 00da 84ED009A 		vstr.32	s18, [r4]
+ 142:moudels/algorithm/MahonyAHRS.c **** 	q[2] *= recipNorm;
+ 617              		.loc 1 142 2 is_stmt 1 view .LVU222
+ 142:moudels/algorithm/MahonyAHRS.c **** 	q[2] *= recipNorm;
+ 618              		.loc 1 142 7 is_stmt 0 view .LVU223
+ 619 00de 68EE808A 		vmul.f32	s17, s17, s0
+ 620 00e2 C4ED018A 		vstr.32	s17, [r4, #4]
+ 143:moudels/algorithm/MahonyAHRS.c **** 	q[3] *= recipNorm;
+ 621              		.loc 1 143 2 is_stmt 1 view .LVU224
+ 143:moudels/algorithm/MahonyAHRS.c **** 	q[3] *= recipNorm;
+ 622              		.loc 1 143 7 is_stmt 0 view .LVU225
+ 623 00e6 28EE008A 		vmul.f32	s16, s16, s0
+ 624 00ea 84ED028A 		vstr.32	s16, [r4, #8]
+ 144:moudels/algorithm/MahonyAHRS.c **** }
+ 625              		.loc 1 144 2 is_stmt 1 view .LVU226
+ 144:moudels/algorithm/MahonyAHRS.c **** }
+ 626              		.loc 1 144 7 is_stmt 0 view .LVU227
+ 627 00ee 69EE809A 		vmul.f32	s19, s19, s0
+ 628 00f2 C4ED039A 		vstr.32	s19, [r4, #12]
+ 629              	.LVL60:
+ 630              	.L15:
+ 145:moudels/algorithm/MahonyAHRS.c **** 
+ 631              		.loc 1 145 1 view .LVU228
+ 632 00f6 BDEC048B 		vldm	sp!, {d8-d9}
+ 633              		.cfi_remember_state
+ 634              		.cfi_restore 82
+ 635              		.cfi_restore 83
+ 636              		.cfi_restore 80
+ 637              		.cfi_restore 81
+ 638              		.cfi_def_cfa_offset 8
+ 639 00fa 10BD     		pop	{r4, pc}
+ 640              	.LVL61:
+ 641              	.L19:
+ 642              		.cfi_restore_state
+  56:moudels/algorithm/MahonyAHRS.c **** 		return;
+ 643              		.loc 1 56 3 is_stmt 1 view .LVU229
+ 644 00fc FFF7FEFF 		bl	MahonyAHRSupdateIMU
+ 645              	.LVL62:
+  57:moudels/algorithm/MahonyAHRS.c **** 	}
+ 646              		.loc 1 57 3 view .LVU230
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 20
+
+
+ 647 0100 F9E7     		b	.L15
+ 648              	.L21:
+ 649 0102 00BF     		.align	2
+ 650              	.L20:
+ 651 0104 6F12033A 		.word	973279855
+ 652              		.cfi_endproc
+ 653              	.LFE0:
+ 655              		.global	integralFBz
+ 656              		.section	.bss.integralFBz,"aw",%nobits
+ 657              		.align	2
+ 660              	integralFBz:
+ 661 0000 00000000 		.space	4
+ 662              		.global	integralFBy
+ 663              		.section	.bss.integralFBy,"aw",%nobits
+ 664              		.align	2
+ 667              	integralFBy:
+ 668 0000 00000000 		.space	4
+ 669              		.global	integralFBx
+ 670              		.section	.bss.integralFBx,"aw",%nobits
+ 671              		.align	2
+ 674              	integralFBx:
+ 675 0000 00000000 		.space	4
+ 676              		.global	twoKi
+ 677              		.section	.bss.twoKi,"aw",%nobits
+ 678              		.align	2
+ 681              	twoKi:
+ 682 0000 00000000 		.space	4
+ 683              		.global	twoKp
+ 684              		.section	.data.twoKp,"aw"
+ 685              		.align	2
+ 688              	twoKp:
+ 689 0000 0000803F 		.word	1065353216
+ 690              		.text
+ 691              	.Letext0:
+ 692              		.file 2 "moudels/algorithm/MahonyAHRS.h"
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s 			page 21
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 MahonyAHRS.c
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:21     .text.invSqrt:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:27     .text.invSqrt:00000000 invSqrt
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:73     .text.invSqrt:0000002c $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:78     .text.MahonyAHRSupdateIMU:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:84     .text.MahonyAHRSupdateIMU:00000000 MahonyAHRSupdateIMU
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:456    .text.MahonyAHRSupdateIMU:0000024c $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:681    .bss.twoKi:00000000 twoKi
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:674    .bss.integralFBx:00000000 integralFBx
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:667    .bss.integralFBy:00000000 integralFBy
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:660    .bss.integralFBz:00000000 integralFBz
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:688    .data.twoKp:00000000 twoKp
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:467    .text.MahonyAHRSupdate:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:473    .text.MahonyAHRSupdate:00000000 MahonyAHRSupdate
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:651    .text.MahonyAHRSupdate:00000104 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:657    .bss.integralFBz:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:664    .bss.integralFBy:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:671    .bss.integralFBx:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:678    .bss.twoKi:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\cc6ZIlme.s:685    .data.twoKp:00000000 $d
+
+NO UNDEFINED SYMBOLS
