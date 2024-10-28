@@ -1,0 +1,597 @@
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"pid.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "moudels/algorithm/pid.c"
+  20              		.section	.text.PID_init,"ax",%progbits
+  21              		.align	1
+  22              		.global	PID_init
+  23              		.syntax unified
+  24              		.thumb
+  25              		.thumb_func
+  27              	PID_init:
+  28              	.LVL0:
+  29              	.LFB134:
+   1:moudels/algorithm/pid.c **** /**
+   2:moudels/algorithm/pid.c ****   ****************************(C) COPYRIGHT 2019 DJI****************************
+   3:moudels/algorithm/pid.c ****   * @file       pid.c/h
+   4:moudels/algorithm/pid.c ****   * @brief      pid实现函数，包括初始化，PID计算函数，
+   5:moudels/algorithm/pid.c ****   * @note       
+   6:moudels/algorithm/pid.c ****   * @history
+   7:moudels/algorithm/pid.c ****   *  Version    Date            Author          Modification
+   8:moudels/algorithm/pid.c ****   *  V1.0.0     Dec-26-2018     RM              1. 完成
+   9:moudels/algorithm/pid.c ****   *
+  10:moudels/algorithm/pid.c ****   @verbatim
+  11:moudels/algorithm/pid.c ****   ==============================================================================
+  12:moudels/algorithm/pid.c **** 
+  13:moudels/algorithm/pid.c ****   ==============================================================================
+  14:moudels/algorithm/pid.c ****   @endverbatim
+  15:moudels/algorithm/pid.c ****   ****************************(C) COPYRIGHT 2019 DJI****************************
+  16:moudels/algorithm/pid.c ****   */
+  17:moudels/algorithm/pid.c **** 
+  18:moudels/algorithm/pid.c **** #include "pid.h"
+  19:moudels/algorithm/pid.c **** #include "main.h"
+  20:moudels/algorithm/pid.c **** 
+  21:moudels/algorithm/pid.c **** #define LimitMax(input, max)   \
+  22:moudels/algorithm/pid.c ****     {                          \
+  23:moudels/algorithm/pid.c ****         if (input > max)       \
+  24:moudels/algorithm/pid.c ****         {                      \
+  25:moudels/algorithm/pid.c ****             input = max;       \
+  26:moudels/algorithm/pid.c ****         }                      \
+  27:moudels/algorithm/pid.c ****         else if (input < -max) \
+  28:moudels/algorithm/pid.c ****         {                      \
+  29:moudels/algorithm/pid.c ****             input = -max;      \
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 2
+
+
+  30:moudels/algorithm/pid.c ****         }                      \
+  31:moudels/algorithm/pid.c ****     }
+  32:moudels/algorithm/pid.c **** 
+  33:moudels/algorithm/pid.c **** /**
+  34:moudels/algorithm/pid.c ****   * @brief          pid struct data init
+  35:moudels/algorithm/pid.c ****   * @param[out]     pid: PID struct data point
+  36:moudels/algorithm/pid.c ****   * @param[in]      mode: PID_POSITION: normal pid
+  37:moudels/algorithm/pid.c ****   *                 PID_DELTA: delta pid
+  38:moudels/algorithm/pid.c ****   * @param[in]      PID: 0: kp, 1: ki, 2:kd
+  39:moudels/algorithm/pid.c ****   * @param[in]      max_out: pid max out
+  40:moudels/algorithm/pid.c ****   * @param[in]      max_iout: pid max iout
+  41:moudels/algorithm/pid.c ****   * @retval         none
+  42:moudels/algorithm/pid.c ****   */
+  43:moudels/algorithm/pid.c **** /**
+  44:moudels/algorithm/pid.c ****   * @brief          pid struct data init
+  45:moudels/algorithm/pid.c ****   * @param[out]     pid: PID结构数据指针
+  46:moudels/algorithm/pid.c ****   * @param[in]      mode: PID_POSITION:普通PID
+  47:moudels/algorithm/pid.c ****   *                 PID_DELTA: 差分PID
+  48:moudels/algorithm/pid.c ****   * @param[in]      PID: 0: kp, 1: ki, 2:kd
+  49:moudels/algorithm/pid.c ****   * @param[in]      max_out: pid最大输出
+  50:moudels/algorithm/pid.c ****   * @param[in]      max_iout: pid最大积分输出
+  51:moudels/algorithm/pid.c ****   * @retval         none
+  52:moudels/algorithm/pid.c ****   */
+  53:moudels/algorithm/pid.c **** void PID_init(pid_type_def *pid, uint8_t mode, const fp32 PID[3], fp32 max_out, fp32 max_iout)
+  54:moudels/algorithm/pid.c **** {
+  30              		.loc 1 54 1 view -0
+  31              		.cfi_startproc
+  32              		@ args = 0, pretend = 0, frame = 0
+  33              		@ frame_needed = 0, uses_anonymous_args = 0
+  34              		@ link register save eliminated.
+  55:moudels/algorithm/pid.c ****     if (pid == NULL || PID == NULL)
+  35              		.loc 1 55 5 view .LVU1
+  36              		.loc 1 55 8 is_stmt 0 view .LVU2
+  37 0000 B0B1     		cbz	r0, .L1
+  38              		.loc 1 55 21 discriminator 1 view .LVU3
+  39 0002 AAB1     		cbz	r2, .L1
+  56:moudels/algorithm/pid.c ****     {
+  57:moudels/algorithm/pid.c ****         return;
+  58:moudels/algorithm/pid.c ****     }
+  59:moudels/algorithm/pid.c ****     pid->mode = mode;
+  40              		.loc 1 59 5 is_stmt 1 view .LVU4
+  41              		.loc 1 59 15 is_stmt 0 view .LVU5
+  42 0004 0170     		strb	r1, [r0]
+  60:moudels/algorithm/pid.c ****     pid->Kp = PID[0];
+  43              		.loc 1 60 5 is_stmt 1 view .LVU6
+  44              		.loc 1 60 18 is_stmt 0 view .LVU7
+  45 0006 1168     		ldr	r1, [r2]	@ float
+  46              	.LVL1:
+  47              		.loc 1 60 13 view .LVU8
+  48 0008 4160     		str	r1, [r0, #4]	@ float
+  61:moudels/algorithm/pid.c ****     pid->Ki = PID[1];
+  49              		.loc 1 61 5 is_stmt 1 view .LVU9
+  50              		.loc 1 61 18 is_stmt 0 view .LVU10
+  51 000a 5168     		ldr	r1, [r2, #4]	@ float
+  52              		.loc 1 61 13 view .LVU11
+  53 000c 8160     		str	r1, [r0, #8]	@ float
+  62:moudels/algorithm/pid.c ****     pid->Kd = PID[2];
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 3
+
+
+  54              		.loc 1 62 5 is_stmt 1 view .LVU12
+  55              		.loc 1 62 18 is_stmt 0 view .LVU13
+  56 000e 9268     		ldr	r2, [r2, #8]	@ float
+  57              	.LVL2:
+  58              		.loc 1 62 13 view .LVU14
+  59 0010 C260     		str	r2, [r0, #12]	@ float
+  63:moudels/algorithm/pid.c ****     pid->max_out = max_out;
+  60              		.loc 1 63 5 is_stmt 1 view .LVU15
+  61              		.loc 1 63 18 is_stmt 0 view .LVU16
+  62 0012 80ED040A 		vstr.32	s0, [r0, #16]
+  64:moudels/algorithm/pid.c ****     pid->max_iout = max_iout;
+  63              		.loc 1 64 5 is_stmt 1 view .LVU17
+  64              		.loc 1 64 19 is_stmt 0 view .LVU18
+  65 0016 C0ED050A 		vstr.32	s1, [r0, #20]
+  65:moudels/algorithm/pid.c ****     pid->Dbuf[0] = pid->Dbuf[1] = pid->Dbuf[2] = 0.0f;
+  66              		.loc 1 65 5 is_stmt 1 view .LVU19
+  67              		.loc 1 65 48 is_stmt 0 view .LVU20
+  68 001a 0022     		movs	r2, #0
+  69 001c 8263     		str	r2, [r0, #56]	@ float
+  70              		.loc 1 65 33 view .LVU21
+  71 001e 4263     		str	r2, [r0, #52]	@ float
+  72              		.loc 1 65 18 view .LVU22
+  73 0020 0263     		str	r2, [r0, #48]	@ float
+  66:moudels/algorithm/pid.c ****     pid->error[0] = pid->error[1] = pid->error[2] = pid->Pout = pid->Iout = pid->Dout = pid->out = 
+  74              		.loc 1 66 5 is_stmt 1 view .LVU23
+  75              		.loc 1 66 98 is_stmt 0 view .LVU24
+  76 0022 0262     		str	r2, [r0, #32]	@ float
+  77              		.loc 1 66 87 view .LVU25
+  78 0024 C262     		str	r2, [r0, #44]	@ float
+  79              		.loc 1 66 75 view .LVU26
+  80 0026 8262     		str	r2, [r0, #40]	@ float
+  81              		.loc 1 66 63 view .LVU27
+  82 0028 4262     		str	r2, [r0, #36]	@ float
+  83              		.loc 1 66 51 view .LVU28
+  84 002a 4264     		str	r2, [r0, #68]	@ float
+  85              		.loc 1 66 35 view .LVU29
+  86 002c 0264     		str	r2, [r0, #64]	@ float
+  87              		.loc 1 66 19 view .LVU30
+  88 002e C263     		str	r2, [r0, #60]	@ float
+  89              	.LVL3:
+  90              	.L1:
+  67:moudels/algorithm/pid.c **** }
+  91              		.loc 1 67 1 view .LVU31
+  92 0030 7047     		bx	lr
+  93              		.cfi_endproc
+  94              	.LFE134:
+  96              		.section	.text.PID_calc,"ax",%progbits
+  97              		.align	1
+  98              		.global	PID_calc
+  99              		.syntax unified
+ 100              		.thumb
+ 101              		.thumb_func
+ 103              	PID_calc:
+ 104              	.LVL4:
+ 105              	.LFB135:
+  68:moudels/algorithm/pid.c **** 
+  69:moudels/algorithm/pid.c **** /**
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 4
+
+
+  70:moudels/algorithm/pid.c ****   * @brief          pid calculate 
+  71:moudels/algorithm/pid.c ****   * @param[out]     pid: PID struct data point
+  72:moudels/algorithm/pid.c ****   * @param[in]      ref: feedback data 
+  73:moudels/algorithm/pid.c ****   * @param[in]      set: set point
+  74:moudels/algorithm/pid.c ****   * @retval         pid out
+  75:moudels/algorithm/pid.c ****   */
+  76:moudels/algorithm/pid.c **** /**
+  77:moudels/algorithm/pid.c ****   * @brief          pid计算
+  78:moudels/algorithm/pid.c ****   * @param[out]     pid: PID结构数据指针
+  79:moudels/algorithm/pid.c ****   * @param[in]      ref: 反馈数据
+  80:moudels/algorithm/pid.c ****   * @param[in]      set: 设定值
+  81:moudels/algorithm/pid.c ****   * @retval         pid输出
+  82:moudels/algorithm/pid.c ****   */
+  83:moudels/algorithm/pid.c **** fp32 PID_calc(pid_type_def *pid, fp32 ref, fp32 set)
+  84:moudels/algorithm/pid.c **** {
+ 106              		.loc 1 84 1 is_stmt 1 view -0
+ 107              		.cfi_startproc
+ 108              		@ args = 0, pretend = 0, frame = 0
+ 109              		@ frame_needed = 0, uses_anonymous_args = 0
+ 110              		@ link register save eliminated.
+  85:moudels/algorithm/pid.c ****     if (pid == NULL)
+ 111              		.loc 1 85 5 view .LVU33
+ 112              		.loc 1 85 8 is_stmt 0 view .LVU34
+ 113 0000 0346     		mov	r3, r0
+ 114 0002 0028     		cmp	r0, #0
+ 115 0004 00F0A380 		beq	.L17
+  86:moudels/algorithm/pid.c ****     {
+  87:moudels/algorithm/pid.c ****         return 0.0f;
+  88:moudels/algorithm/pid.c ****     }
+  89:moudels/algorithm/pid.c **** 
+  90:moudels/algorithm/pid.c ****     pid->error[2] = pid->error[1];
+ 116              		.loc 1 90 5 is_stmt 1 view .LVU35
+ 117              		.loc 1 90 31 is_stmt 0 view .LVU36
+ 118 0008 D0ED107A 		vldr.32	s15, [r0, #64]
+ 119              		.loc 1 90 19 view .LVU37
+ 120 000c C0ED117A 		vstr.32	s15, [r0, #68]
+  91:moudels/algorithm/pid.c ****     pid->error[1] = pid->error[0];
+ 121              		.loc 1 91 5 is_stmt 1 view .LVU38
+ 122              		.loc 1 91 31 is_stmt 0 view .LVU39
+ 123 0010 90ED0F7A 		vldr.32	s14, [r0, #60]
+ 124              		.loc 1 91 19 view .LVU40
+ 125 0014 80ED107A 		vstr.32	s14, [r0, #64]
+  92:moudels/algorithm/pid.c ****     pid->set = set;
+ 126              		.loc 1 92 5 is_stmt 1 view .LVU41
+ 127              		.loc 1 92 14 is_stmt 0 view .LVU42
+ 128 0018 C0ED060A 		vstr.32	s1, [r0, #24]
+  93:moudels/algorithm/pid.c ****     pid->fdb = ref;
+ 129              		.loc 1 93 5 is_stmt 1 view .LVU43
+ 130              		.loc 1 93 14 is_stmt 0 view .LVU44
+ 131 001c 80ED070A 		vstr.32	s0, [r0, #28]
+  94:moudels/algorithm/pid.c ****     pid->error[0] = set - ref;
+ 132              		.loc 1 94 5 is_stmt 1 view .LVU45
+ 133              		.loc 1 94 25 is_stmt 0 view .LVU46
+ 134 0020 70EEC00A 		vsub.f32	s1, s1, s0
+ 135              	.LVL5:
+ 136              		.loc 1 94 19 view .LVU47
+ 137 0024 C0ED0F0A 		vstr.32	s1, [r0, #60]
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 5
+
+
+  95:moudels/algorithm/pid.c ****     if (pid->mode == PID_POSITION)
+ 138              		.loc 1 95 5 is_stmt 1 view .LVU48
+ 139              		.loc 1 95 12 is_stmt 0 view .LVU49
+ 140 0028 0278     		ldrb	r2, [r0]	@ zero_extendqisi2
+ 141              		.loc 1 95 8 view .LVU50
+ 142 002a 002A     		cmp	r2, #0
+ 143 002c 4CD1     		bne	.L5
+  96:moudels/algorithm/pid.c ****     {
+  97:moudels/algorithm/pid.c ****         pid->Pout = pid->Kp * pid->error[0];
+ 144              		.loc 1 97 9 is_stmt 1 view .LVU51
+ 145              		.loc 1 97 24 is_stmt 0 view .LVU52
+ 146 002e D0ED017A 		vldr.32	s15, [r0, #4]
+ 147              		.loc 1 97 29 view .LVU53
+ 148 0032 60EEA77A 		vmul.f32	s15, s1, s15
+ 149              		.loc 1 97 19 view .LVU54
+ 150 0036 C0ED097A 		vstr.32	s15, [r0, #36]
+  98:moudels/algorithm/pid.c ****         pid->Iout += pid->Ki * pid->error[0];
+ 151              		.loc 1 98 9 is_stmt 1 view .LVU55
+ 152              		.loc 1 98 12 is_stmt 0 view .LVU56
+ 153 003a D0ED0A6A 		vldr.32	s13, [r0, #40]
+ 154              		.loc 1 98 25 view .LVU57
+ 155 003e 90ED026A 		vldr.32	s12, [r0, #8]
+ 156              		.loc 1 98 30 view .LVU58
+ 157 0042 20EE866A 		vmul.f32	s12, s1, s12
+ 158              		.loc 1 98 19 view .LVU59
+ 159 0046 76EE866A 		vadd.f32	s13, s13, s12
+ 160 004a C0ED0A6A 		vstr.32	s13, [r0, #40]
+  99:moudels/algorithm/pid.c ****         pid->Dbuf[2] = pid->Dbuf[1];
+ 161              		.loc 1 99 9 is_stmt 1 view .LVU60
+ 162              		.loc 1 99 33 is_stmt 0 view .LVU61
+ 163 004e 426B     		ldr	r2, [r0, #52]	@ float
+ 164              		.loc 1 99 22 view .LVU62
+ 165 0050 8263     		str	r2, [r0, #56]	@ float
+ 100:moudels/algorithm/pid.c ****         pid->Dbuf[1] = pid->Dbuf[0];
+ 166              		.loc 1 100 9 is_stmt 1 view .LVU63
+ 167              		.loc 1 100 33 is_stmt 0 view .LVU64
+ 168 0052 026B     		ldr	r2, [r0, #48]	@ float
+ 169              		.loc 1 100 22 view .LVU65
+ 170 0054 4263     		str	r2, [r0, #52]	@ float
+ 101:moudels/algorithm/pid.c ****         pid->Dbuf[0] = (pid->error[0] - pid->error[1]);
+ 171              		.loc 1 101 9 is_stmt 1 view .LVU66
+ 172              		.loc 1 101 39 is_stmt 0 view .LVU67
+ 173 0056 70EEC70A 		vsub.f32	s1, s1, s14
+ 174              		.loc 1 101 22 view .LVU68
+ 175 005a C0ED0C0A 		vstr.32	s1, [r0, #48]
+ 102:moudels/algorithm/pid.c ****         pid->Dout = pid->Kd * pid->Dbuf[0];
+ 176              		.loc 1 102 9 is_stmt 1 view .LVU69
+ 177              		.loc 1 102 24 is_stmt 0 view .LVU70
+ 178 005e 90ED037A 		vldr.32	s14, [r0, #12]
+ 179              		.loc 1 102 29 view .LVU71
+ 180 0062 60EE870A 		vmul.f32	s1, s1, s14
+ 181              		.loc 1 102 19 view .LVU72
+ 182 0066 C0ED0B0A 		vstr.32	s1, [r0, #44]
+ 103:moudels/algorithm/pid.c ****         LimitMax(pid->Iout, pid->max_iout);
+ 183              		.loc 1 103 9 is_stmt 1 view .LVU73
+ 184 006a 90ED057A 		vldr.32	s14, [r0, #20]
+ 185 006e F4EEC76A 		vcmpe.f32	s13, s14
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 6
+
+
+ 186 0072 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 187 0076 13DD     		ble	.L24
+ 188              		.loc 1 103 9 discriminator 1 view .LVU74
+ 189 0078 80ED0A7A 		vstr.32	s14, [r0, #40]
+ 190              	.L8:
+ 191              		.loc 1 103 43 discriminator 6 view .LVU75
+ 104:moudels/algorithm/pid.c ****         pid->out = pid->Pout + pid->Iout + pid->Dout;
+ 192              		.loc 1 104 9 view .LVU76
+ 193              		.loc 1 104 35 is_stmt 0 view .LVU77
+ 194 007c 93ED0A7A 		vldr.32	s14, [r3, #40]
+ 195              		.loc 1 104 30 view .LVU78
+ 196 0080 77EE877A 		vadd.f32	s15, s15, s14
+ 197              		.loc 1 104 42 view .LVU79
+ 198 0084 70EEA70A 		vadd.f32	s1, s1, s15
+ 199              		.loc 1 104 18 view .LVU80
+ 200 0088 C3ED080A 		vstr.32	s1, [r3, #32]
+ 105:moudels/algorithm/pid.c ****         LimitMax(pid->out, pid->max_out);
+ 201              		.loc 1 105 9 is_stmt 1 view .LVU81
+ 202 008c D3ED047A 		vldr.32	s15, [r3, #16]
+ 203 0090 F4EEE70A 		vcmpe.f32	s1, s15
+ 204 0094 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 205 0098 0CDD     		ble	.L25
+ 206              		.loc 1 105 9 discriminator 1 view .LVU82
+ 207 009a C3ED087A 		vstr.32	s15, [r3, #32]
+ 208 009e 15E0     		b	.L12
+ 209              	.L24:
+ 103:moudels/algorithm/pid.c ****         LimitMax(pid->Iout, pid->max_iout);
+ 210              		.loc 1 103 9 discriminator 2 view .LVU83
+ 211 00a0 B1EE477A 		vneg.f32	s14, s14
+ 212 00a4 F4EEC76A 		vcmpe.f32	s13, s14
+ 213 00a8 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 214 00ac E6D5     		bpl	.L8
+ 103:moudels/algorithm/pid.c ****         LimitMax(pid->Iout, pid->max_iout);
+ 215              		.loc 1 103 9 discriminator 4 view .LVU84
+ 216 00ae 80ED0A7A 		vstr.32	s14, [r0, #40]
+ 217 00b2 E3E7     		b	.L8
+ 218              	.L25:
+ 219              		.loc 1 105 9 discriminator 2 view .LVU85
+ 220 00b4 F1EE677A 		vneg.f32	s15, s15
+ 221 00b8 F4EEE70A 		vcmpe.f32	s1, s15
+ 222 00bc F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 223 00c0 04D5     		bpl	.L12
+ 224              		.loc 1 105 9 discriminator 4 view .LVU86
+ 225 00c2 C3ED087A 		vstr.32	s15, [r3, #32]
+ 226 00c6 01E0     		b	.L12
+ 227              	.L5:
+ 106:moudels/algorithm/pid.c ****     }
+ 107:moudels/algorithm/pid.c ****     else if (pid->mode == PID_DELTA)
+ 228              		.loc 1 107 10 view .LVU87
+ 229              		.loc 1 107 13 is_stmt 0 view .LVU88
+ 230 00c8 012A     		cmp	r2, #1
+ 231 00ca 02D0     		beq	.L27
+ 232              	.L12:
+ 108:moudels/algorithm/pid.c ****     {
+ 109:moudels/algorithm/pid.c ****         pid->Pout = pid->Kp * (pid->error[0] - pid->error[1]);
+ 110:moudels/algorithm/pid.c ****         pid->Iout = pid->Ki * pid->error[0];
+ 111:moudels/algorithm/pid.c ****         pid->Dbuf[2] = pid->Dbuf[1];
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 7
+
+
+ 112:moudels/algorithm/pid.c ****         pid->Dbuf[1] = pid->Dbuf[0];
+ 113:moudels/algorithm/pid.c ****         pid->Dbuf[0] = (pid->error[0] - 2.0f * pid->error[1] + pid->error[2]);
+ 114:moudels/algorithm/pid.c ****         pid->Dout = pid->Kd * pid->Dbuf[0];
+ 115:moudels/algorithm/pid.c ****         pid->out += pid->Pout + pid->Iout + pid->Dout;
+ 116:moudels/algorithm/pid.c ****         LimitMax(pid->out, pid->max_out);
+ 233              		.loc 1 116 41 is_stmt 1 discriminator 6 view .LVU89
+ 117:moudels/algorithm/pid.c ****     }
+ 118:moudels/algorithm/pid.c ****     return pid->out;
+ 234              		.loc 1 118 5 view .LVU90
+ 235              		.loc 1 118 15 is_stmt 0 view .LVU91
+ 236 00cc 93ED080A 		vldr.32	s0, [r3, #32]
+ 237              	.LVL6:
+ 238              		.loc 1 118 15 view .LVU92
+ 239 00d0 7047     		bx	lr
+ 240              	.LVL7:
+ 241              	.L27:
+ 109:moudels/algorithm/pid.c ****         pid->Iout = pid->Ki * pid->error[0];
+ 242              		.loc 1 109 9 is_stmt 1 view .LVU93
+ 109:moudels/algorithm/pid.c ****         pid->Iout = pid->Ki * pid->error[0];
+ 243              		.loc 1 109 24 is_stmt 0 view .LVU94
+ 244 00d2 D0ED016A 		vldr.32	s13, [r0, #4]
+ 109:moudels/algorithm/pid.c ****         pid->Iout = pid->Ki * pid->error[0];
+ 245              		.loc 1 109 46 view .LVU95
+ 246 00d6 30EEC76A 		vsub.f32	s12, s1, s14
+ 109:moudels/algorithm/pid.c ****         pid->Iout = pid->Ki * pid->error[0];
+ 247              		.loc 1 109 29 view .LVU96
+ 248 00da 66EE866A 		vmul.f32	s13, s13, s12
+ 109:moudels/algorithm/pid.c ****         pid->Iout = pid->Ki * pid->error[0];
+ 249              		.loc 1 109 19 view .LVU97
+ 250 00de C0ED096A 		vstr.32	s13, [r0, #36]
+ 110:moudels/algorithm/pid.c ****         pid->Dbuf[2] = pid->Dbuf[1];
+ 251              		.loc 1 110 9 is_stmt 1 view .LVU98
+ 110:moudels/algorithm/pid.c ****         pid->Dbuf[2] = pid->Dbuf[1];
+ 252              		.loc 1 110 24 is_stmt 0 view .LVU99
+ 253 00e2 90ED026A 		vldr.32	s12, [r0, #8]
+ 110:moudels/algorithm/pid.c ****         pid->Dbuf[2] = pid->Dbuf[1];
+ 254              		.loc 1 110 29 view .LVU100
+ 255 00e6 20EE866A 		vmul.f32	s12, s1, s12
+ 110:moudels/algorithm/pid.c ****         pid->Dbuf[2] = pid->Dbuf[1];
+ 256              		.loc 1 110 19 view .LVU101
+ 257 00ea 80ED0A6A 		vstr.32	s12, [r0, #40]
+ 111:moudels/algorithm/pid.c ****         pid->Dbuf[1] = pid->Dbuf[0];
+ 258              		.loc 1 111 9 is_stmt 1 view .LVU102
+ 111:moudels/algorithm/pid.c ****         pid->Dbuf[1] = pid->Dbuf[0];
+ 259              		.loc 1 111 33 is_stmt 0 view .LVU103
+ 260 00ee 426B     		ldr	r2, [r0, #52]	@ float
+ 111:moudels/algorithm/pid.c ****         pid->Dbuf[1] = pid->Dbuf[0];
+ 261              		.loc 1 111 22 view .LVU104
+ 262 00f0 8263     		str	r2, [r0, #56]	@ float
+ 112:moudels/algorithm/pid.c ****         pid->Dbuf[0] = (pid->error[0] - 2.0f * pid->error[1] + pid->error[2]);
+ 263              		.loc 1 112 9 is_stmt 1 view .LVU105
+ 112:moudels/algorithm/pid.c ****         pid->Dbuf[0] = (pid->error[0] - 2.0f * pid->error[1] + pid->error[2]);
+ 264              		.loc 1 112 33 is_stmt 0 view .LVU106
+ 265 00f2 026B     		ldr	r2, [r0, #48]	@ float
+ 112:moudels/algorithm/pid.c ****         pid->Dbuf[0] = (pid->error[0] - 2.0f * pid->error[1] + pid->error[2]);
+ 266              		.loc 1 112 22 view .LVU107
+ 267 00f4 4263     		str	r2, [r0, #52]	@ float
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 8
+
+
+ 113:moudels/algorithm/pid.c ****         pid->Dout = pid->Kd * pid->Dbuf[0];
+ 268              		.loc 1 113 9 is_stmt 1 view .LVU108
+ 113:moudels/algorithm/pid.c ****         pid->Dout = pid->Kd * pid->Dbuf[0];
+ 269              		.loc 1 113 46 is_stmt 0 view .LVU109
+ 270 00f6 37EE077A 		vadd.f32	s14, s14, s14
+ 113:moudels/algorithm/pid.c ****         pid->Dout = pid->Kd * pid->Dbuf[0];
+ 271              		.loc 1 113 39 view .LVU110
+ 272 00fa 70EEC70A 		vsub.f32	s1, s1, s14
+ 113:moudels/algorithm/pid.c ****         pid->Dout = pid->Kd * pid->Dbuf[0];
+ 273              		.loc 1 113 62 view .LVU111
+ 274 00fe 77EEA07A 		vadd.f32	s15, s15, s1
+ 113:moudels/algorithm/pid.c ****         pid->Dout = pid->Kd * pid->Dbuf[0];
+ 275              		.loc 1 113 22 view .LVU112
+ 276 0102 C0ED0C7A 		vstr.32	s15, [r0, #48]
+ 114:moudels/algorithm/pid.c ****         pid->out += pid->Pout + pid->Iout + pid->Dout;
+ 277              		.loc 1 114 9 is_stmt 1 view .LVU113
+ 114:moudels/algorithm/pid.c ****         pid->out += pid->Pout + pid->Iout + pid->Dout;
+ 278              		.loc 1 114 24 is_stmt 0 view .LVU114
+ 279 0106 90ED037A 		vldr.32	s14, [r0, #12]
+ 114:moudels/algorithm/pid.c ****         pid->out += pid->Pout + pid->Iout + pid->Dout;
+ 280              		.loc 1 114 29 view .LVU115
+ 281 010a 67EE877A 		vmul.f32	s15, s15, s14
+ 114:moudels/algorithm/pid.c ****         pid->out += pid->Pout + pid->Iout + pid->Dout;
+ 282              		.loc 1 114 19 view .LVU116
+ 283 010e C0ED0B7A 		vstr.32	s15, [r0, #44]
+ 115:moudels/algorithm/pid.c ****         LimitMax(pid->out, pid->max_out);
+ 284              		.loc 1 115 9 is_stmt 1 view .LVU117
+ 115:moudels/algorithm/pid.c ****         LimitMax(pid->out, pid->max_out);
+ 285              		.loc 1 115 12 is_stmt 0 view .LVU118
+ 286 0112 90ED087A 		vldr.32	s14, [r0, #32]
+ 115:moudels/algorithm/pid.c ****         LimitMax(pid->out, pid->max_out);
+ 287              		.loc 1 115 31 view .LVU119
+ 288 0116 76EE866A 		vadd.f32	s13, s13, s12
+ 115:moudels/algorithm/pid.c ****         LimitMax(pid->out, pid->max_out);
+ 289              		.loc 1 115 43 view .LVU120
+ 290 011a 77EEA67A 		vadd.f32	s15, s15, s13
+ 115:moudels/algorithm/pid.c ****         LimitMax(pid->out, pid->max_out);
+ 291              		.loc 1 115 18 view .LVU121
+ 292 011e 77EE277A 		vadd.f32	s15, s14, s15
+ 293 0122 C0ED087A 		vstr.32	s15, [r0, #32]
+ 116:moudels/algorithm/pid.c ****     }
+ 294              		.loc 1 116 9 is_stmt 1 view .LVU122
+ 295 0126 90ED047A 		vldr.32	s14, [r0, #16]
+ 296 012a F4EEC77A 		vcmpe.f32	s15, s14
+ 297 012e F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 298 0132 02DD     		ble	.L26
+ 116:moudels/algorithm/pid.c ****     }
+ 299              		.loc 1 116 9 discriminator 1 view .LVU123
+ 300 0134 80ED087A 		vstr.32	s14, [r0, #32]
+ 301 0138 C8E7     		b	.L12
+ 302              	.L26:
+ 116:moudels/algorithm/pid.c ****     }
+ 303              		.loc 1 116 9 discriminator 2 view .LVU124
+ 304 013a B1EE477A 		vneg.f32	s14, s14
+ 305 013e F4EEC77A 		vcmpe.f32	s15, s14
+ 306 0142 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 307 0146 C1D5     		bpl	.L12
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 9
+
+
+ 116:moudels/algorithm/pid.c ****     }
+ 308              		.loc 1 116 9 discriminator 4 view .LVU125
+ 309 0148 80ED087A 		vstr.32	s14, [r0, #32]
+ 310 014c BEE7     		b	.L12
+ 311              	.LVL8:
+ 312              	.L17:
+  87:moudels/algorithm/pid.c ****     }
+ 313              		.loc 1 87 16 is_stmt 0 view .LVU126
+ 314 014e 9FED010A 		vldr.32	s0, .L28
+ 315              	.LVL9:
+ 119:moudels/algorithm/pid.c **** }
+ 316              		.loc 1 119 1 view .LVU127
+ 317 0152 7047     		bx	lr
+ 318              	.L29:
+ 319              		.align	2
+ 320              	.L28:
+ 321 0154 00000000 		.word	0
+ 322              		.cfi_endproc
+ 323              	.LFE135:
+ 325              		.section	.text.PID_clear,"ax",%progbits
+ 326              		.align	1
+ 327              		.global	PID_clear
+ 328              		.syntax unified
+ 329              		.thumb
+ 330              		.thumb_func
+ 332              	PID_clear:
+ 333              	.LVL10:
+ 334              	.LFB136:
+ 120:moudels/algorithm/pid.c **** 
+ 121:moudels/algorithm/pid.c **** /**
+ 122:moudels/algorithm/pid.c ****   * @brief          pid out clear
+ 123:moudels/algorithm/pid.c ****   * @param[out]     pid: PID struct data point
+ 124:moudels/algorithm/pid.c ****   * @retval         none
+ 125:moudels/algorithm/pid.c ****   */
+ 126:moudels/algorithm/pid.c **** /**
+ 127:moudels/algorithm/pid.c ****   * @brief          pid 输出清除
+ 128:moudels/algorithm/pid.c ****   * @param[out]     pid: PID结构数据指针
+ 129:moudels/algorithm/pid.c ****   * @retval         none
+ 130:moudels/algorithm/pid.c ****   */
+ 131:moudels/algorithm/pid.c **** void PID_clear(pid_type_def *pid)
+ 132:moudels/algorithm/pid.c **** {
+ 335              		.loc 1 132 1 is_stmt 1 view -0
+ 336              		.cfi_startproc
+ 337              		@ args = 0, pretend = 0, frame = 0
+ 338              		@ frame_needed = 0, uses_anonymous_args = 0
+ 339              		@ link register save eliminated.
+ 133:moudels/algorithm/pid.c ****     if (pid == NULL)
+ 340              		.loc 1 133 5 view .LVU129
+ 341              		.loc 1 133 8 is_stmt 0 view .LVU130
+ 342 0000 60B1     		cbz	r0, .L30
+ 134:moudels/algorithm/pid.c ****     {
+ 135:moudels/algorithm/pid.c ****         return;
+ 136:moudels/algorithm/pid.c ****     }
+ 137:moudels/algorithm/pid.c **** 
+ 138:moudels/algorithm/pid.c ****     pid->error[0] = pid->error[1] = pid->error[2] = 0.0f;
+ 343              		.loc 1 138 5 is_stmt 1 view .LVU131
+ 344              		.loc 1 138 51 is_stmt 0 view .LVU132
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 10
+
+
+ 345 0002 0022     		movs	r2, #0
+ 346 0004 4264     		str	r2, [r0, #68]	@ float
+ 347              		.loc 1 138 35 view .LVU133
+ 348 0006 0264     		str	r2, [r0, #64]	@ float
+ 349              		.loc 1 138 19 view .LVU134
+ 350 0008 C263     		str	r2, [r0, #60]	@ float
+ 139:moudels/algorithm/pid.c ****     pid->Dbuf[0] = pid->Dbuf[1] = pid->Dbuf[2] = 0.0f;
+ 351              		.loc 1 139 5 is_stmt 1 view .LVU135
+ 352              		.loc 1 139 48 is_stmt 0 view .LVU136
+ 353 000a 8263     		str	r2, [r0, #56]	@ float
+ 354              		.loc 1 139 33 view .LVU137
+ 355 000c 4263     		str	r2, [r0, #52]	@ float
+ 356              		.loc 1 139 18 view .LVU138
+ 357 000e 0263     		str	r2, [r0, #48]	@ float
+ 140:moudels/algorithm/pid.c ****     pid->out = pid->Pout = pid->Iout = pid->Dout = 0.0f;
+ 358              		.loc 1 140 5 is_stmt 1 view .LVU139
+ 359              		.loc 1 140 50 is_stmt 0 view .LVU140
+ 360 0010 C262     		str	r2, [r0, #44]	@ float
+ 361              		.loc 1 140 38 view .LVU141
+ 362 0012 8262     		str	r2, [r0, #40]	@ float
+ 363              		.loc 1 140 26 view .LVU142
+ 364 0014 4262     		str	r2, [r0, #36]	@ float
+ 365              		.loc 1 140 14 view .LVU143
+ 366 0016 0262     		str	r2, [r0, #32]	@ float
+ 141:moudels/algorithm/pid.c ****     pid->fdb = pid->set = 0.0f;
+ 367              		.loc 1 141 5 is_stmt 1 view .LVU144
+ 368              		.loc 1 141 25 is_stmt 0 view .LVU145
+ 369 0018 8261     		str	r2, [r0, #24]	@ float
+ 370              		.loc 1 141 14 view .LVU146
+ 371 001a C261     		str	r2, [r0, #28]	@ float
+ 372              	.L30:
+ 142:moudels/algorithm/pid.c **** }
+ 373              		.loc 1 142 1 view .LVU147
+ 374 001c 7047     		bx	lr
+ 375              		.cfi_endproc
+ 376              	.LFE136:
+ 378              		.text
+ 379              	.Letext0:
+ 380              		.file 2 "bsp/boards/struct_typedef.h"
+ 381              		.file 3 "moudels/algorithm/pid.h"
+ARM GAS  C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s 			page 11
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 pid.c
+C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s:21     .text.PID_init:00000000 $t
+C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s:27     .text.PID_init:00000000 PID_init
+C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s:97     .text.PID_calc:00000000 $t
+C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s:103    .text.PID_calc:00000000 PID_calc
+C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s:321    .text.PID_calc:00000154 $d
+C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s:326    .text.PID_clear:00000000 $t
+C:\Users\Sive\AppData\Local\Temp\ccq5bopv.s:332    .text.PID_clear:00000000 PID_clear
+
+NO UNDEFINED SYMBOLS

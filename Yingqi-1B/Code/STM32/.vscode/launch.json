@@ -1,0 +1,37 @@
+{
+    "configurations": [
+
+        {
+            "showDevDebugOutput": "parsed",
+            "cwd": "${workspaceRoot}",
+            "executable": "./build/to_90.elf",
+            "name": "Debug STM32",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "preLaunchTask": "Build STM",
+            "device": "stm32f407",
+            "configFiles": [
+                "openocd.cfg"
+            ],
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 4
+            }
+        },
+        {
+            "showDevDebugOutput": "parsed",
+            "cwd": "${workspaceRoot}",
+            "executable": "./build/to_90.elf",
+            "name": "Attach STM32",
+            "request": "attach",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "preLaunchTask": "Build STM",
+            "device": "stm32f407",
+            "configFiles": [
+                "openocd.cfg"
+            ]
+        }
+    ]
+}

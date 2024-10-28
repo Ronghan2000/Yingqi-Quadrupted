@@ -1,0 +1,353 @@
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"daemon.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "moudels/daemon/daemon.c"
+  20              		.section	.text.DaemonRegister,"ax",%progbits
+  21              		.align	1
+  22              		.global	DaemonRegister
+  23              		.syntax unified
+  24              		.thumb
+  25              		.thumb_func
+  27              	DaemonRegister:
+  28              	.LVL0:
+  29              	.LFB134:
+   1:moudels/daemon/daemon.c **** #include "daemon.h"
+   2:moudels/daemon/daemon.c **** #include "bsp_dwt.h" // 后续通过定时器来计时?
+   3:moudels/daemon/daemon.c **** #include "stdlib.h"
+   4:moudels/daemon/daemon.c **** #include "memory.h"
+   5:moudels/daemon/daemon.c **** // #include "buzzer.h"
+   6:moudels/daemon/daemon.c **** 
+   7:moudels/daemon/daemon.c **** // 用于保存所有的daemon instance
+   8:moudels/daemon/daemon.c **** static DaemonInstance *daemon_instances[DAEMON_MX_CNT] = {NULL};
+   9:moudels/daemon/daemon.c **** static uint8_t idx; // 用于记录当前的daemon instance数量,配合回调使用
+  10:moudels/daemon/daemon.c **** 
+  11:moudels/daemon/daemon.c **** DaemonInstance *DaemonRegister(Daemon_Init_Config_s *config)
+  12:moudels/daemon/daemon.c **** {
+  30              		.loc 1 12 1 view -0
+  31              		.cfi_startproc
+  32              		@ args = 0, pretend = 0, frame = 0
+  33              		@ frame_needed = 0, uses_anonymous_args = 0
+  34              		.loc 1 12 1 is_stmt 0 view .LVU1
+  35 0000 10B5     		push	{r4, lr}
+  36              		.cfi_def_cfa_offset 8
+  37              		.cfi_offset 4, -8
+  38              		.cfi_offset 14, -4
+  39 0002 0446     		mov	r4, r0
+  13:moudels/daemon/daemon.c ****     DaemonInstance *instance = (DaemonInstance *)malloc(sizeof(DaemonInstance));
+  40              		.loc 1 13 5 is_stmt 1 view .LVU2
+  41              		.loc 1 13 50 is_stmt 0 view .LVU3
+  42 0004 1020     		movs	r0, #16
+  43              	.LVL1:
+  44              		.loc 1 13 50 view .LVU4
+  45 0006 FFF7FEFF 		bl	malloc
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s 			page 2
+
+
+  46              	.LVL2:
+  14:moudels/daemon/daemon.c ****     memset(instance, 0, sizeof(DaemonInstance));
+  47              		.loc 1 14 5 is_stmt 1 view .LVU5
+  48 000a 0023     		movs	r3, #0
+  49 000c 0360     		str	r3, [r0]	@ unaligned
+  50 000e 4360     		str	r3, [r0, #4]	@ unaligned
+  51 0010 8360     		str	r3, [r0, #8]	@ unaligned
+  52 0012 C360     		str	r3, [r0, #12]	@ unaligned
+  15:moudels/daemon/daemon.c **** 
+  16:moudels/daemon/daemon.c ****     instance->owner_id = config->owner_id;
+  53              		.loc 1 16 5 view .LVU6
+  54              		.loc 1 16 32 is_stmt 0 view .LVU7
+  55 0014 A368     		ldr	r3, [r4, #8]
+  56              		.loc 1 16 24 view .LVU8
+  57 0016 C360     		str	r3, [r0, #12]
+  17:moudels/daemon/daemon.c ****     instance->reload_count = config->reload_count == 0 ? 100 : config->reload_count; // 默认值�
+  58              		.loc 1 17 5 is_stmt 1 view .LVU9
+  59              		.loc 1 17 36 is_stmt 0 view .LVU10
+  60 0018 2388     		ldrh	r3, [r4]
+  61              		.loc 1 17 28 view .LVU11
+  62 001a 03B9     		cbnz	r3, .L2
+  63              		.loc 1 17 28 discriminator 2 view .LVU12
+  64 001c 6423     		movs	r3, #100
+  65              	.L2:
+  66              		.loc 1 17 28 discriminator 4 view .LVU13
+  67 001e 0380     		strh	r3, [r0]	@ movhi
+  18:moudels/daemon/daemon.c ****     instance->callback = config->callback;
+  68              		.loc 1 18 5 is_stmt 1 view .LVU14
+  69              		.loc 1 18 32 is_stmt 0 view .LVU15
+  70 0020 6368     		ldr	r3, [r4, #4]
+  71              		.loc 1 18 24 view .LVU16
+  72 0022 4360     		str	r3, [r0, #4]
+  19:moudels/daemon/daemon.c ****     instance->temp_count = config->init_count == 0 ? 100 : config->init_count; // 默认值为100,�
+  73              		.loc 1 19 5 is_stmt 1 view .LVU17
+  74              		.loc 1 19 34 is_stmt 0 view .LVU18
+  75 0024 6388     		ldrh	r3, [r4, #2]
+  76              		.loc 1 19 26 view .LVU19
+  77 0026 03B9     		cbnz	r3, .L3
+  78              		.loc 1 19 26 discriminator 2 view .LVU20
+  79 0028 6423     		movs	r3, #100
+  80              	.L3:
+  81              		.loc 1 19 26 discriminator 4 view .LVU21
+  82 002a 0381     		strh	r3, [r0, #8]	@ movhi
+  20:moudels/daemon/daemon.c **** 
+  21:moudels/daemon/daemon.c ****     instance->temp_count = config->reload_count;
+  83              		.loc 1 21 5 is_stmt 1 view .LVU22
+  84              		.loc 1 21 34 is_stmt 0 view .LVU23
+  85 002c 2388     		ldrh	r3, [r4]
+  86              		.loc 1 21 26 view .LVU24
+  87 002e 0381     		strh	r3, [r0, #8]	@ movhi
+  22:moudels/daemon/daemon.c ****     daemon_instances[idx++] = instance;
+  88              		.loc 1 22 5 is_stmt 1 view .LVU25
+  89              		.loc 1 22 25 is_stmt 0 view .LVU26
+  90 0030 034A     		ldr	r2, .L5
+  91 0032 1378     		ldrb	r3, [r2]	@ zero_extendqisi2
+  92 0034 591C     		adds	r1, r3, #1
+  93 0036 1170     		strb	r1, [r2]
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s 			page 3
+
+
+  94              		.loc 1 22 29 view .LVU27
+  95 0038 024A     		ldr	r2, .L5+4
+  96 003a 42F82300 		str	r0, [r2, r3, lsl #2]
+  23:moudels/daemon/daemon.c ****     return instance;
+  97              		.loc 1 23 5 is_stmt 1 view .LVU28
+  24:moudels/daemon/daemon.c **** }
+  98              		.loc 1 24 1 is_stmt 0 view .LVU29
+  99 003e 10BD     		pop	{r4, pc}
+ 100              	.LVL3:
+ 101              	.L6:
+ 102              		.loc 1 24 1 view .LVU30
+ 103              		.align	2
+ 104              	.L5:
+ 105 0040 00000000 		.word	idx
+ 106 0044 00000000 		.word	daemon_instances
+ 107              		.cfi_endproc
+ 108              	.LFE134:
+ 110              		.section	.text.DaemonReload,"ax",%progbits
+ 111              		.align	1
+ 112              		.global	DaemonReload
+ 113              		.syntax unified
+ 114              		.thumb
+ 115              		.thumb_func
+ 117              	DaemonReload:
+ 118              	.LVL4:
+ 119              	.LFB135:
+  25:moudels/daemon/daemon.c **** 
+  26:moudels/daemon/daemon.c **** /* "喂狗"函数 */
+  27:moudels/daemon/daemon.c **** void DaemonReload(DaemonInstance *instance)
+  28:moudels/daemon/daemon.c **** {
+ 120              		.loc 1 28 1 is_stmt 1 view -0
+ 121              		.cfi_startproc
+ 122              		@ args = 0, pretend = 0, frame = 0
+ 123              		@ frame_needed = 0, uses_anonymous_args = 0
+ 124              		@ link register save eliminated.
+  29:moudels/daemon/daemon.c ****     instance->temp_count = instance->reload_count;
+ 125              		.loc 1 29 5 view .LVU32
+ 126              		.loc 1 29 36 is_stmt 0 view .LVU33
+ 127 0000 0388     		ldrh	r3, [r0]
+ 128              		.loc 1 29 26 view .LVU34
+ 129 0002 0381     		strh	r3, [r0, #8]	@ movhi
+  30:moudels/daemon/daemon.c **** }
+ 130              		.loc 1 30 1 view .LVU35
+ 131 0004 7047     		bx	lr
+ 132              		.cfi_endproc
+ 133              	.LFE135:
+ 135              		.section	.text.DaemonIsOnline,"ax",%progbits
+ 136              		.align	1
+ 137              		.global	DaemonIsOnline
+ 138              		.syntax unified
+ 139              		.thumb
+ 140              		.thumb_func
+ 142              	DaemonIsOnline:
+ 143              	.LVL5:
+ 144              	.LFB136:
+  31:moudels/daemon/daemon.c **** 
+  32:moudels/daemon/daemon.c **** uint8_t DaemonIsOnline(DaemonInstance *instance)
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s 			page 4
+
+
+  33:moudels/daemon/daemon.c **** {
+ 145              		.loc 1 33 1 is_stmt 1 view -0
+ 146              		.cfi_startproc
+ 147              		@ args = 0, pretend = 0, frame = 0
+ 148              		@ frame_needed = 0, uses_anonymous_args = 0
+ 149              		@ link register save eliminated.
+  34:moudels/daemon/daemon.c ****     return instance->temp_count > 0;
+ 150              		.loc 1 34 5 view .LVU37
+ 151              		.loc 1 34 20 is_stmt 0 view .LVU38
+ 152 0000 0089     		ldrh	r0, [r0, #8]
+ 153              	.LVL6:
+  35:moudels/daemon/daemon.c **** }
+ 154              		.loc 1 35 1 view .LVU39
+ 155 0002 0038     		subs	r0, r0, #0
+ 156 0004 18BF     		it	ne
+ 157 0006 0120     		movne	r0, #1
+ 158 0008 7047     		bx	lr
+ 159              		.cfi_endproc
+ 160              	.LFE136:
+ 162              		.section	.text.DaemonTask,"ax",%progbits
+ 163              		.align	1
+ 164              		.global	DaemonTask
+ 165              		.syntax unified
+ 166              		.thumb
+ 167              		.thumb_func
+ 169              	DaemonTask:
+ 170              	.LFB137:
+  36:moudels/daemon/daemon.c **** 
+  37:moudels/daemon/daemon.c **** void DaemonTask()
+  38:moudels/daemon/daemon.c **** {
+ 171              		.loc 1 38 1 is_stmt 1 view -0
+ 172              		.cfi_startproc
+ 173              		@ args = 0, pretend = 0, frame = 0
+ 174              		@ frame_needed = 0, uses_anonymous_args = 0
+ 175 0000 10B5     		push	{r4, lr}
+ 176              		.cfi_def_cfa_offset 8
+ 177              		.cfi_offset 4, -8
+ 178              		.cfi_offset 14, -4
+  39:moudels/daemon/daemon.c ****     DaemonInstance *dins; // 提高可读性同时降低访存开销
+ 179              		.loc 1 39 5 view .LVU41
+  40:moudels/daemon/daemon.c ****     for (size_t i = 0; i < idx; ++i)
+ 180              		.loc 1 40 5 view .LVU42
+ 181              	.LBB2:
+ 182              		.loc 1 40 10 view .LVU43
+ 183              	.LVL7:
+ 184              		.loc 1 40 17 is_stmt 0 view .LVU44
+ 185 0002 0024     		movs	r4, #0
+ 186              		.loc 1 40 5 view .LVU45
+ 187 0004 04E0     		b	.L10
+ 188              	.LVL8:
+ 189              	.L11:
+  41:moudels/daemon/daemon.c ****     {
+  42:moudels/daemon/daemon.c **** 
+  43:moudels/daemon/daemon.c ****         dins = daemon_instances[i];
+  44:moudels/daemon/daemon.c ****         if (dins->temp_count > 0) // 如果计数器还有值,说明上一次喂狗后还没有超�
+  45:moudels/daemon/daemon.c ****             dins->temp_count--;
+  46:moudels/daemon/daemon.c ****         else if (dins->callback) // 等于零说明超时了,调用回调函数(如果有的话)
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s 			page 5
+
+
+ 190              		.loc 1 46 14 is_stmt 1 view .LVU46
+ 191              		.loc 1 46 22 is_stmt 0 view .LVU47
+ 192 0006 5368     		ldr	r3, [r2, #4]
+ 193              		.loc 1 46 17 view .LVU48
+ 194 0008 0BB1     		cbz	r3, .L12
+  47:moudels/daemon/daemon.c ****         {
+  48:moudels/daemon/daemon.c ****             dins->callback(dins->owner_id); // module内可以将owner_id强制类型转换成自�
+ 195              		.loc 1 48 13 is_stmt 1 view .LVU49
+ 196 000a D068     		ldr	r0, [r2, #12]
+ 197 000c 9847     		blx	r3
+ 198              	.LVL9:
+ 199              	.L12:
+  40:moudels/daemon/daemon.c ****     {
+ 200              		.loc 1 40 33 discriminator 2 view .LVU50
+ 201 000e 0134     		adds	r4, r4, #1
+ 202              	.LVL10:
+ 203              	.L10:
+  40:moudels/daemon/daemon.c ****     {
+ 204              		.loc 1 40 26 discriminator 1 view .LVU51
+ 205 0010 064B     		ldr	r3, .L16
+ 206 0012 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 207 0014 A342     		cmp	r3, r4
+ 208 0016 08D9     		bls	.L15
+  43:moudels/daemon/daemon.c ****         if (dins->temp_count > 0) // 如果计数器还有值,说明上一次喂狗后还没有超�
+ 209              		.loc 1 43 9 view .LVU52
+  43:moudels/daemon/daemon.c ****         if (dins->temp_count > 0) // 如果计数器还有值,说明上一次喂狗后还没有超�
+ 210              		.loc 1 43 14 is_stmt 0 view .LVU53
+ 211 0018 054B     		ldr	r3, .L16+4
+ 212 001a 53F82420 		ldr	r2, [r3, r4, lsl #2]
+ 213              	.LVL11:
+  44:moudels/daemon/daemon.c ****             dins->temp_count--;
+ 214              		.loc 1 44 9 is_stmt 1 view .LVU54
+  44:moudels/daemon/daemon.c ****             dins->temp_count--;
+ 215              		.loc 1 44 17 is_stmt 0 view .LVU55
+ 216 001e 1389     		ldrh	r3, [r2, #8]
+  44:moudels/daemon/daemon.c ****             dins->temp_count--;
+ 217              		.loc 1 44 12 view .LVU56
+ 218 0020 002B     		cmp	r3, #0
+ 219 0022 F0D0     		beq	.L11
+  45:moudels/daemon/daemon.c ****         else if (dins->callback) // 等于零说明超时了,调用回调函数(如果有的话)
+ 220              		.loc 1 45 13 is_stmt 1 view .LVU57
+  45:moudels/daemon/daemon.c ****         else if (dins->callback) // 等于零说明超时了,调用回调函数(如果有的话)
+ 221              		.loc 1 45 29 is_stmt 0 view .LVU58
+ 222 0024 013B     		subs	r3, r3, #1
+ 223 0026 1381     		strh	r3, [r2, #8]	@ movhi
+ 224 0028 F1E7     		b	.L12
+ 225              	.LVL12:
+ 226              	.L15:
+  45:moudels/daemon/daemon.c ****         else if (dins->callback) // 等于零说明超时了,调用回调函数(如果有的话)
+ 227              		.loc 1 45 29 view .LVU59
+ 228              	.LBE2:
+  49:moudels/daemon/daemon.c ****             // @todo 为蜂鸣器/led等增加离线报警的功能,非常关键!
+  50:moudels/daemon/daemon.c ****         }
+  51:moudels/daemon/daemon.c ****     }
+  52:moudels/daemon/daemon.c **** }
+ 229              		.loc 1 52 1 view .LVU60
+ 230 002a 10BD     		pop	{r4, pc}
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s 			page 6
+
+
+ 231              	.LVL13:
+ 232              	.L17:
+ 233              		.loc 1 52 1 view .LVU61
+ 234              		.align	2
+ 235              	.L16:
+ 236 002c 00000000 		.word	idx
+ 237 0030 00000000 		.word	daemon_instances
+ 238              		.cfi_endproc
+ 239              	.LFE137:
+ 241              		.section	.bss.idx,"aw",%nobits
+ 244              	idx:
+ 245 0000 00       		.space	1
+ 246              		.section	.bss.daemon_instances,"aw",%nobits
+ 247              		.align	2
+ 250              	daemon_instances:
+ 251 0000 00000000 		.space	256
+ 251      00000000 
+ 251      00000000 
+ 251      00000000 
+ 251      00000000 
+ 252              		.text
+ 253              	.Letext0:
+ 254              		.file 2 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 255              		.file 3 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 256              		.file 4 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 257              		.file 5 "moudels/daemon/daemon.h"
+ 258              		.file 6 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 259              		.file 7 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s 			page 7
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 daemon.c
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:21     .text.DaemonRegister:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:27     .text.DaemonRegister:00000000 DaemonRegister
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:105    .text.DaemonRegister:00000040 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:244    .bss.idx:00000000 idx
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:250    .bss.daemon_instances:00000000 daemon_instances
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:111    .text.DaemonReload:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:117    .text.DaemonReload:00000000 DaemonReload
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:136    .text.DaemonIsOnline:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:142    .text.DaemonIsOnline:00000000 DaemonIsOnline
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:163    .text.DaemonTask:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:169    .text.DaemonTask:00000000 DaemonTask
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:236    .text.DaemonTask:0000002c $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:245    .bss.idx:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccQNamOu.s:247    .bss.daemon_instances:00000000 $d
+
+UNDEFINED SYMBOLS
+malloc

@@ -1,0 +1,21 @@
+{
+    "cortex-debug.armToolchainPath": "c:\\Users\\WS-XIAOYA\\AppData\\Roaming\\Code\\User\\globalStorage\\bmd.stm32-for-vscode\\@xpack-dev-tools\\arm-none-eabi-gcc\\13.2.1-1.1.1\\.content\\bin",
+    "cortex-debug.openocdPath": "C:\\USERS\\WS-XIAOYA\\APPDATA\\ROAMING\\CODE\\USER\\GLOBALSTORAGE\\BMD.STM32-FOR-VSCODE\\@XPACK-DEV-TOOLS\\OPENOCD\\0.12.0-3.1\\.CONTENT\\BIN\\OPENOCD.EXE",
+    "files.associations": {
+        "bmi088driver.h": "c",
+        "bmi088middleware.h": "c",
+        "arm_math.h": "c",
+        "robot_def.h": "c",
+        "dji_motor.h": "c",
+        "remote_control.h": "c",
+        "general_def.h": "c",
+        "stm32f4xx.h": "c",
+        "message_center.h": "c",
+        "usart.h": "c",
+        "mimotor.h": "c",
+        "controller.h": "c",
+        "distance.h": "c",
+        "bsp_dwt.h": "c",
+        "stm32f4xx_hal.h": "c"
+    }
+}

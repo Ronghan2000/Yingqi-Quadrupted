@@ -1,0 +1,1136 @@
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"controller.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "moudels/algorithm/controller.c"
+  20              		.section	.text.f_Trapezoid_Intergral,"ax",%progbits
+  21              		.align	1
+  22              		.syntax unified
+  23              		.thumb
+  24              		.thumb_func
+  26              	f_Trapezoid_Intergral:
+  27              	.LVL0:
+  28              	.LFB134:
+   1:moudels/algorithm/controller.c **** /**
+   2:moudels/algorithm/controller.c ****  * @file controller.c
+   3:moudels/algorithm/controller.c ****  * @author wanghongxi
+   4:moudels/algorithm/controller.c ****  * @author modified by neozng
+   5:moudels/algorithm/controller.c ****  * @brief  PID控制器定义
+   6:moudels/algorithm/controller.c ****  * @version beta
+   7:moudels/algorithm/controller.c ****  * @date 2022-11-01
+   8:moudels/algorithm/controller.c ****  *
+   9:moudels/algorithm/controller.c ****  * @copyrightCopyright (c) 2022 HNU YueLu EC all rights reserved
+  10:moudels/algorithm/controller.c ****  */
+  11:moudels/algorithm/controller.c **** #include "controller.h"
+  12:moudels/algorithm/controller.c **** #include "memory.h"
+  13:moudels/algorithm/controller.c **** 
+  14:moudels/algorithm/controller.c **** /* ----------------------------下面是pid优化环节的实现---------------------------- */
+  15:moudels/algorithm/controller.c **** 
+  16:moudels/algorithm/controller.c **** // 梯形积分
+  17:moudels/algorithm/controller.c **** static void f_Trapezoid_Intergral(PIDInstance *pid)
+  18:moudels/algorithm/controller.c **** {
+  29              		.loc 1 18 1 view -0
+  30              		.cfi_startproc
+  31              		@ args = 0, pretend = 0, frame = 0
+  32              		@ frame_needed = 0, uses_anonymous_args = 0
+  33              		@ link register save eliminated.
+  19:moudels/algorithm/controller.c ****     // 计算梯形的面积,(上底+下底)*高/2
+  20:moudels/algorithm/controller.c ****     pid->ITerm = pid->Ki * ((pid->Err + pid->Last_Err) / 2) * pid->dt;
+  34              		.loc 1 20 5 view .LVU1
+  35              		.loc 1 20 21 is_stmt 0 view .LVU2
+  36 0000 D0ED017A 		vldr.32	s15, [r0, #4]
+  37              		.loc 1 20 33 view .LVU3
+  38 0004 90ED0D7A 		vldr.32	s14, [r0, #52]
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 2
+
+
+  39              		.loc 1 20 44 view .LVU4
+  40 0008 D0ED0E6A 		vldr.32	s13, [r0, #56]
+  41              		.loc 1 20 39 view .LVU5
+  42 000c 37EE267A 		vadd.f32	s14, s14, s13
+  43              		.loc 1 20 56 view .LVU6
+  44 0010 F6EE006A 		vmov.f32	s13, #5.0e-1
+  45 0014 27EE267A 		vmul.f32	s14, s14, s13
+  46              		.loc 1 20 26 view .LVU7
+  47 0018 67EE877A 		vmul.f32	s15, s15, s14
+  48              		.loc 1 20 66 view .LVU8
+  49 001c 90ED197A 		vldr.32	s14, [r0, #100]
+  50              		.loc 1 20 61 view .LVU9
+  51 0020 67EE877A 		vmul.f32	s15, s15, s14
+  52              		.loc 1 20 16 view .LVU10
+  53 0024 C0ED137A 		vstr.32	s15, [r0, #76]
+  21:moudels/algorithm/controller.c **** }
+  54              		.loc 1 21 1 view .LVU11
+  55 0028 7047     		bx	lr
+  56              		.cfi_endproc
+  57              	.LFE134:
+  59              		.section	.text.f_Changing_Integration_Rate,"ax",%progbits
+  60              		.align	1
+  61              		.syntax unified
+  62              		.thumb
+  63              		.thumb_func
+  65              	f_Changing_Integration_Rate:
+  66              	.LVL1:
+  67              	.LFB135:
+  22:moudels/algorithm/controller.c **** 
+  23:moudels/algorithm/controller.c **** // 变速积分(误差小时积分作用更强)
+  24:moudels/algorithm/controller.c **** static void f_Changing_Integration_Rate(PIDInstance *pid)
+  25:moudels/algorithm/controller.c **** {
+  68              		.loc 1 25 1 is_stmt 1 view -0
+  69              		.cfi_startproc
+  70              		@ args = 0, pretend = 0, frame = 0
+  71              		@ frame_needed = 0, uses_anonymous_args = 0
+  72              		@ link register save eliminated.
+  26:moudels/algorithm/controller.c ****     if (pid->Err * pid->Iout > 0)
+  73              		.loc 1 26 5 view .LVU13
+  74              		.loc 1 26 12 is_stmt 0 view .LVU14
+  75 0000 D0ED0D7A 		vldr.32	s15, [r0, #52]
+  76              		.loc 1 26 23 view .LVU15
+  77 0004 90ED117A 		vldr.32	s14, [r0, #68]
+  78              		.loc 1 26 18 view .LVU16
+  79 0008 27EE877A 		vmul.f32	s14, s15, s14
+  80              		.loc 1 26 8 view .LVU17
+  81 000c B5EEC07A 		vcmpe.f32	s14, #0
+  82 0010 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+  83 0014 26DD     		ble	.L2
+  27:moudels/algorithm/controller.c ****     {
+  28:moudels/algorithm/controller.c ****         // 积分呈累积趋势
+  29:moudels/algorithm/controller.c ****         if (abs(pid->Err) <= pid->CoefB)
+  84              		.loc 1 29 9 is_stmt 1 view .LVU18
+  85              		.loc 1 29 13 is_stmt 0 view .LVU19
+  86 0016 F5EEC07A 		vcmpe.f32	s15, #0
+  87 001a F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+  88 001e 1CDD     		ble	.L11
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 3
+
+
+  89              	.L5:
+  90              		.loc 1 29 33 discriminator 4 view .LVU20
+  91 0020 90ED087A 		vldr.32	s14, [r0, #32]
+  92              		.loc 1 29 12 discriminator 4 view .LVU21
+  93 0024 B4EEE77A 		vcmpe.f32	s14, s15
+  94 0028 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+  95 002c 1ADA     		bge	.L2
+  30:moudels/algorithm/controller.c ****             return; // Full integral
+  31:moudels/algorithm/controller.c ****         if (abs(pid->Err) <= (pid->CoefA + pid->CoefB))
+  96              		.loc 1 31 9 is_stmt 1 view .LVU22
+  97              		.loc 1 31 34 is_stmt 0 discriminator 4 view .LVU23
+  98 002e D0ED076A 		vldr.32	s13, [r0, #28]
+  99              		.loc 1 31 42 discriminator 4 view .LVU24
+ 100 0032 37EE266A 		vadd.f32	s12, s14, s13
+ 101              		.loc 1 31 12 discriminator 4 view .LVU25
+ 102 0036 B4EEE76A 		vcmpe.f32	s12, s15
+ 103 003a F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 104 003e 0FDB     		blt	.L10
+  32:moudels/algorithm/controller.c ****             pid->ITerm *= (pid->CoefA - abs(pid->Err) + pid->CoefB) / pid->CoefA;
+ 105              		.loc 1 32 13 is_stmt 1 view .LVU26
+ 106              		.loc 1 32 16 is_stmt 0 view .LVU27
+ 107 0040 90ED136A 		vldr.32	s12, [r0, #76]
+ 108              		.loc 1 32 39 discriminator 4 view .LVU28
+ 109 0044 76EEE77A 		vsub.f32	s15, s13, s15
+ 110              		.loc 1 32 55 discriminator 4 view .LVU29
+ 111 0048 37EE277A 		vadd.f32	s14, s14, s15
+ 112              		.loc 1 32 69 discriminator 4 view .LVU30
+ 113 004c C7EE267A 		vdiv.f32	s15, s14, s13
+ 114              		.loc 1 32 24 discriminator 4 view .LVU31
+ 115 0050 66EE277A 		vmul.f32	s15, s12, s15
+ 116 0054 C0ED137A 		vstr.32	s15, [r0, #76]
+ 117 0058 7047     		bx	lr
+ 118              	.L11:
+  29:moudels/algorithm/controller.c ****             return; // Full integral
+ 119              		.loc 1 29 13 discriminator 2 view .LVU32
+ 120 005a F1EE677A 		vneg.f32	s15, s15
+ 121 005e DFE7     		b	.L5
+ 122              	.L10:
+  33:moudels/algorithm/controller.c ****         else // 最大阈值,不使用积分
+  34:moudels/algorithm/controller.c ****             pid->ITerm = 0;
+ 123              		.loc 1 34 13 is_stmt 1 view .LVU33
+ 124              		.loc 1 34 24 is_stmt 0 view .LVU34
+ 125 0060 0023     		movs	r3, #0
+ 126 0062 C364     		str	r3, [r0, #76]	@ float
+ 127              	.L2:
+  35:moudels/algorithm/controller.c ****     }
+  36:moudels/algorithm/controller.c **** }
+ 128              		.loc 1 36 1 view .LVU35
+ 129 0064 7047     		bx	lr
+ 130              		.cfi_endproc
+ 131              	.LFE135:
+ 133              		.section	.text.f_Integral_Limit,"ax",%progbits
+ 134              		.align	1
+ 135              		.syntax unified
+ 136              		.thumb
+ 137              		.thumb_func
+ 139              	f_Integral_Limit:
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 4
+
+
+ 140              	.LVL2:
+ 141              	.LFB136:
+  37:moudels/algorithm/controller.c **** 
+  38:moudels/algorithm/controller.c **** static void f_Integral_Limit(PIDInstance *pid)
+  39:moudels/algorithm/controller.c **** {
+ 142              		.loc 1 39 1 is_stmt 1 view -0
+ 143              		.cfi_startproc
+ 144              		@ args = 0, pretend = 0, frame = 0
+ 145              		@ frame_needed = 0, uses_anonymous_args = 0
+ 146              		@ link register save eliminated.
+  40:moudels/algorithm/controller.c ****     static float temp_Output, temp_Iout;
+ 147              		.loc 1 40 5 view .LVU37
+  41:moudels/algorithm/controller.c ****     temp_Iout = pid->Iout + pid->ITerm;
+ 148              		.loc 1 41 5 view .LVU38
+ 149              		.loc 1 41 20 is_stmt 0 view .LVU39
+ 150 0000 D0ED116A 		vldr.32	s13, [r0, #68]
+ 151              		.loc 1 41 32 view .LVU40
+ 152 0004 90ED137A 		vldr.32	s14, [r0, #76]
+ 153              		.loc 1 41 27 view .LVU41
+ 154 0008 36EE877A 		vadd.f32	s14, s13, s14
+ 155              		.loc 1 41 15 view .LVU42
+ 156 000c 1F4B     		ldr	r3, .L26
+ 157 000e 83ED007A 		vstr.32	s14, [r3]
+  42:moudels/algorithm/controller.c ****     temp_Output = pid->Pout + pid->Iout + pid->Dout;
+ 158              		.loc 1 42 5 is_stmt 1 view .LVU43
+ 159              		.loc 1 42 22 is_stmt 0 view .LVU44
+ 160 0012 D0ED107A 		vldr.32	s15, [r0, #64]
+ 161              		.loc 1 42 29 view .LVU45
+ 162 0016 76EEA77A 		vadd.f32	s15, s13, s15
+ 163              		.loc 1 42 46 view .LVU46
+ 164 001a 90ED126A 		vldr.32	s12, [r0, #72]
+ 165              		.loc 1 42 41 view .LVU47
+ 166 001e 77EE867A 		vadd.f32	s15, s15, s12
+ 167              		.loc 1 42 17 view .LVU48
+ 168 0022 1B4B     		ldr	r3, .L26+4
+ 169 0024 C3ED007A 		vstr.32	s15, [r3]
+  43:moudels/algorithm/controller.c ****     if (abs(temp_Output) > pid->MaxOut)
+ 170              		.loc 1 43 5 is_stmt 1 view .LVU49
+ 171              		.loc 1 43 9 is_stmt 0 view .LVU50
+ 172 0028 F5EEC07A 		vcmpe.f32	s15, #0
+ 173 002c F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 174 0030 28DD     		ble	.L25
+ 175              	.L13:
+ 176              		.loc 1 43 31 discriminator 4 view .LVU51
+ 177 0032 90ED036A 		vldr.32	s12, [r0, #12]
+ 178              		.loc 1 43 8 discriminator 4 view .LVU52
+ 179 0036 B4EEE76A 		vcmpe.f32	s12, s15
+ 180 003a F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 181 003e 0AD5     		bpl	.L14
+  44:moudels/algorithm/controller.c ****     {
+  45:moudels/algorithm/controller.c ****         if (pid->Err * pid->Iout > 0) // 积分却还在累积
+ 182              		.loc 1 45 9 is_stmt 1 view .LVU53
+ 183              		.loc 1 45 16 is_stmt 0 view .LVU54
+ 184 0040 D0ED0D7A 		vldr.32	s15, [r0, #52]
+ 185              		.loc 1 45 22 view .LVU55
+ 186 0044 66EEA76A 		vmul.f32	s13, s13, s15
+ 187              		.loc 1 45 12 view .LVU56
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 5
+
+
+ 188 0048 F5EEC06A 		vcmpe.f32	s13, #0
+ 189 004c F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 190 0050 01DD     		ble	.L14
+  46:moudels/algorithm/controller.c ****         {
+  47:moudels/algorithm/controller.c ****             pid->ITerm = 0; // 当前积分项置零
+ 191              		.loc 1 47 13 is_stmt 1 view .LVU57
+ 192              		.loc 1 47 24 is_stmt 0 view .LVU58
+ 193 0052 0023     		movs	r3, #0
+ 194 0054 C364     		str	r3, [r0, #76]	@ float
+ 195              	.L14:
+  48:moudels/algorithm/controller.c ****         }
+  49:moudels/algorithm/controller.c ****     }
+  50:moudels/algorithm/controller.c **** 
+  51:moudels/algorithm/controller.c ****     if (temp_Iout > pid->IntegralLimit)
+ 196              		.loc 1 51 5 is_stmt 1 view .LVU59
+ 197              		.loc 1 51 24 is_stmt 0 view .LVU60
+ 198 0056 D0ED067A 		vldr.32	s15, [r0, #24]
+ 199              		.loc 1 51 8 view .LVU61
+ 200 005a B4EEE77A 		vcmpe.f32	s14, s15
+ 201 005e F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 202 0062 03DD     		ble	.L17
+  52:moudels/algorithm/controller.c ****     {
+  53:moudels/algorithm/controller.c ****         pid->ITerm = 0;
+ 203              		.loc 1 53 9 is_stmt 1 view .LVU62
+ 204              		.loc 1 53 20 is_stmt 0 view .LVU63
+ 205 0064 0023     		movs	r3, #0
+ 206 0066 C364     		str	r3, [r0, #76]	@ float
+  54:moudels/algorithm/controller.c ****         pid->Iout = pid->IntegralLimit;
+ 207              		.loc 1 54 9 is_stmt 1 view .LVU64
+ 208              		.loc 1 54 19 is_stmt 0 view .LVU65
+ 209 0068 C0ED117A 		vstr.32	s15, [r0, #68]
+ 210              	.L17:
+  55:moudels/algorithm/controller.c ****     }
+  56:moudels/algorithm/controller.c ****     if (temp_Iout < -pid->IntegralLimit)
+ 211              		.loc 1 56 5 is_stmt 1 view .LVU66
+ 212              		.loc 1 56 21 is_stmt 0 view .LVU67
+ 213 006c F1EE677A 		vneg.f32	s15, s15
+ 214              		.loc 1 56 8 view .LVU68
+ 215 0070 B4EEE77A 		vcmpe.f32	s14, s15
+ 216 0074 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 217 0078 03D5     		bpl	.L12
+  57:moudels/algorithm/controller.c ****     {
+  58:moudels/algorithm/controller.c ****         pid->ITerm = 0;
+ 218              		.loc 1 58 9 is_stmt 1 view .LVU69
+ 219              		.loc 1 58 20 is_stmt 0 view .LVU70
+ 220 007a 0023     		movs	r3, #0
+ 221 007c C364     		str	r3, [r0, #76]	@ float
+  59:moudels/algorithm/controller.c ****         pid->Iout = -pid->IntegralLimit;
+ 222              		.loc 1 59 9 is_stmt 1 view .LVU71
+ 223              		.loc 1 59 19 is_stmt 0 view .LVU72
+ 224 007e C0ED117A 		vstr.32	s15, [r0, #68]
+ 225              	.L12:
+  60:moudels/algorithm/controller.c ****     }
+  61:moudels/algorithm/controller.c **** }
+ 226              		.loc 1 61 1 view .LVU73
+ 227 0082 7047     		bx	lr
+ 228              	.L25:
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 6
+
+
+  43:moudels/algorithm/controller.c ****     {
+ 229              		.loc 1 43 9 discriminator 2 view .LVU74
+ 230 0084 F1EE677A 		vneg.f32	s15, s15
+ 231 0088 D3E7     		b	.L13
+ 232              	.L27:
+ 233 008a 00BF     		.align	2
+ 234              	.L26:
+ 235 008c 00000000 		.word	temp_Iout.1
+ 236 0090 00000000 		.word	temp_Output.0
+ 237              		.cfi_endproc
+ 238              	.LFE136:
+ 240              		.section	.text.f_Derivative_On_Measurement,"ax",%progbits
+ 241              		.align	1
+ 242              		.syntax unified
+ 243              		.thumb
+ 244              		.thumb_func
+ 246              	f_Derivative_On_Measurement:
+ 247              	.LVL3:
+ 248              	.LFB137:
+  62:moudels/algorithm/controller.c **** 
+  63:moudels/algorithm/controller.c **** // 微分先行(仅使用反馈值而不计参考输入的微分)
+  64:moudels/algorithm/controller.c **** static void f_Derivative_On_Measurement(PIDInstance *pid)
+  65:moudels/algorithm/controller.c **** {
+ 249              		.loc 1 65 1 is_stmt 1 view -0
+ 250              		.cfi_startproc
+ 251              		@ args = 0, pretend = 0, frame = 0
+ 252              		@ frame_needed = 0, uses_anonymous_args = 0
+ 253              		@ link register save eliminated.
+  66:moudels/algorithm/controller.c ****     pid->Dout = pid->Kd * (pid->Last_Measure - pid->Measure) / pid->dt;
+ 254              		.loc 1 66 5 view .LVU76
+ 255              		.loc 1 66 20 is_stmt 0 view .LVU77
+ 256 0000 D0ED027A 		vldr.32	s15, [r0, #8]
+ 257              		.loc 1 66 31 view .LVU78
+ 258 0004 90ED0C7A 		vldr.32	s14, [r0, #48]
+ 259              		.loc 1 66 51 view .LVU79
+ 260 0008 D0ED0B6A 		vldr.32	s13, [r0, #44]
+ 261              		.loc 1 66 46 view .LVU80
+ 262 000c 37EE667A 		vsub.f32	s14, s14, s13
+ 263              		.loc 1 66 25 view .LVU81
+ 264 0010 67EE877A 		vmul.f32	s15, s15, s14
+ 265              		.loc 1 66 67 view .LVU82
+ 266 0014 D0ED196A 		vldr.32	s13, [r0, #100]
+ 267              		.loc 1 66 62 view .LVU83
+ 268 0018 87EEA67A 		vdiv.f32	s14, s15, s13
+ 269              		.loc 1 66 15 view .LVU84
+ 270 001c 80ED127A 		vstr.32	s14, [r0, #72]
+  67:moudels/algorithm/controller.c **** }
+ 271              		.loc 1 67 1 view .LVU85
+ 272 0020 7047     		bx	lr
+ 273              		.cfi_endproc
+ 274              	.LFE137:
+ 276              		.section	.text.f_Derivative_Filter,"ax",%progbits
+ 277              		.align	1
+ 278              		.syntax unified
+ 279              		.thumb
+ 280              		.thumb_func
+ 282              	f_Derivative_Filter:
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 7
+
+
+ 283              	.LVL4:
+ 284              	.LFB138:
+  68:moudels/algorithm/controller.c **** 
+  69:moudels/algorithm/controller.c **** // 微分滤波(采集微分时,滤除高频噪声)
+  70:moudels/algorithm/controller.c **** static void f_Derivative_Filter(PIDInstance *pid)
+  71:moudels/algorithm/controller.c **** {
+ 285              		.loc 1 71 1 is_stmt 1 view -0
+ 286              		.cfi_startproc
+ 287              		@ args = 0, pretend = 0, frame = 0
+ 288              		@ frame_needed = 0, uses_anonymous_args = 0
+ 289              		@ link register save eliminated.
+  72:moudels/algorithm/controller.c ****     pid->Dout = pid->Dout * pid->dt / (pid->Derivative_LPF_RC + pid->dt) +
+ 290              		.loc 1 72 5 view .LVU87
+ 291              		.loc 1 72 20 is_stmt 0 view .LVU88
+ 292 0000 90ED126A 		vldr.32	s12, [r0, #72]
+ 293              		.loc 1 72 32 view .LVU89
+ 294 0004 D0ED197A 		vldr.32	s15, [r0, #100]
+ 295              		.loc 1 72 27 view .LVU90
+ 296 0008 26EE276A 		vmul.f32	s12, s12, s15
+ 297              		.loc 1 72 43 view .LVU91
+ 298 000c 90ED0A7A 		vldr.32	s14, [r0, #40]
+ 299              		.loc 1 72 63 view .LVU92
+ 300 0010 77EE877A 		vadd.f32	s15, s15, s14
+ 301              		.loc 1 72 37 view .LVU93
+ 302 0014 C6EE276A 		vdiv.f32	s13, s12, s15
+  73:moudels/algorithm/controller.c ****                 pid->Last_Dout * pid->Derivative_LPF_RC / (pid->Derivative_LPF_RC + pid->dt);
+ 303              		.loc 1 73 20 view .LVU94
+ 304 0018 90ED166A 		vldr.32	s12, [r0, #88]
+ 305              		.loc 1 73 32 view .LVU95
+ 306 001c 27EE067A 		vmul.f32	s14, s14, s12
+ 307              		.loc 1 73 57 view .LVU96
+ 308 0020 87EE276A 		vdiv.f32	s12, s14, s15
+  72:moudels/algorithm/controller.c ****     pid->Dout = pid->Dout * pid->dt / (pid->Derivative_LPF_RC + pid->dt) +
+ 309              		.loc 1 72 74 view .LVU97
+ 310 0024 76EE867A 		vadd.f32	s15, s13, s12
+  72:moudels/algorithm/controller.c ****     pid->Dout = pid->Dout * pid->dt / (pid->Derivative_LPF_RC + pid->dt) +
+ 311              		.loc 1 72 15 view .LVU98
+ 312 0028 C0ED127A 		vstr.32	s15, [r0, #72]
+  74:moudels/algorithm/controller.c **** }
+ 313              		.loc 1 74 1 view .LVU99
+ 314 002c 7047     		bx	lr
+ 315              		.cfi_endproc
+ 316              	.LFE138:
+ 318              		.section	.text.f_Output_Filter,"ax",%progbits
+ 319              		.align	1
+ 320              		.syntax unified
+ 321              		.thumb
+ 322              		.thumb_func
+ 324              	f_Output_Filter:
+ 325              	.LVL5:
+ 326              	.LFB139:
+  75:moudels/algorithm/controller.c **** 
+  76:moudels/algorithm/controller.c **** // 输出滤波
+  77:moudels/algorithm/controller.c **** static void f_Output_Filter(PIDInstance *pid)
+  78:moudels/algorithm/controller.c **** {
+ 327              		.loc 1 78 1 is_stmt 1 view -0
+ 328              		.cfi_startproc
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 8
+
+
+ 329              		@ args = 0, pretend = 0, frame = 0
+ 330              		@ frame_needed = 0, uses_anonymous_args = 0
+ 331              		@ link register save eliminated.
+  79:moudels/algorithm/controller.c ****     pid->Output = pid->Output * pid->dt / (pid->Output_LPF_RC + pid->dt) +
+ 332              		.loc 1 79 5 view .LVU101
+ 333              		.loc 1 79 22 is_stmt 0 view .LVU102
+ 334 0000 90ED146A 		vldr.32	s12, [r0, #80]
+ 335              		.loc 1 79 36 view .LVU103
+ 336 0004 D0ED197A 		vldr.32	s15, [r0, #100]
+ 337              		.loc 1 79 31 view .LVU104
+ 338 0008 26EE276A 		vmul.f32	s12, s12, s15
+ 339              		.loc 1 79 47 view .LVU105
+ 340 000c 90ED097A 		vldr.32	s14, [r0, #36]
+ 341              		.loc 1 79 63 view .LVU106
+ 342 0010 77EE877A 		vadd.f32	s15, s15, s14
+ 343              		.loc 1 79 41 view .LVU107
+ 344 0014 C6EE276A 		vdiv.f32	s13, s12, s15
+  80:moudels/algorithm/controller.c ****                   pid->Last_Output * pid->Output_LPF_RC / (pid->Output_LPF_RC + pid->dt);
+ 345              		.loc 1 80 22 view .LVU108
+ 346 0018 90ED156A 		vldr.32	s12, [r0, #84]
+ 347              		.loc 1 80 36 view .LVU109
+ 348 001c 27EE067A 		vmul.f32	s14, s14, s12
+ 349              		.loc 1 80 57 view .LVU110
+ 350 0020 87EE276A 		vdiv.f32	s12, s14, s15
+  79:moudels/algorithm/controller.c ****     pid->Output = pid->Output * pid->dt / (pid->Output_LPF_RC + pid->dt) +
+ 351              		.loc 1 79 74 view .LVU111
+ 352 0024 76EE867A 		vadd.f32	s15, s13, s12
+  79:moudels/algorithm/controller.c ****     pid->Output = pid->Output * pid->dt / (pid->Output_LPF_RC + pid->dt) +
+ 353              		.loc 1 79 17 view .LVU112
+ 354 0028 C0ED147A 		vstr.32	s15, [r0, #80]
+  81:moudels/algorithm/controller.c **** }
+ 355              		.loc 1 81 1 view .LVU113
+ 356 002c 7047     		bx	lr
+ 357              		.cfi_endproc
+ 358              	.LFE139:
+ 360              		.section	.text.f_Output_Limit,"ax",%progbits
+ 361              		.align	1
+ 362              		.syntax unified
+ 363              		.thumb
+ 364              		.thumb_func
+ 366              	f_Output_Limit:
+ 367              	.LVL6:
+ 368              	.LFB140:
+  82:moudels/algorithm/controller.c **** 
+  83:moudels/algorithm/controller.c **** // 输出限幅
+  84:moudels/algorithm/controller.c **** static void f_Output_Limit(PIDInstance *pid)
+  85:moudels/algorithm/controller.c **** {
+ 369              		.loc 1 85 1 is_stmt 1 view -0
+ 370              		.cfi_startproc
+ 371              		@ args = 0, pretend = 0, frame = 0
+ 372              		@ frame_needed = 0, uses_anonymous_args = 0
+ 373              		@ link register save eliminated.
+  86:moudels/algorithm/controller.c ****     if (pid->Output > pid->MaxOut)
+ 374              		.loc 1 86 5 view .LVU115
+ 375              		.loc 1 86 12 is_stmt 0 view .LVU116
+ 376 0000 90ED147A 		vldr.32	s14, [r0, #80]
+ 377              		.loc 1 86 26 view .LVU117
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 9
+
+
+ 378 0004 D0ED037A 		vldr.32	s15, [r0, #12]
+ 379              		.loc 1 86 8 view .LVU118
+ 380 0008 B4EEE77A 		vcmpe.f32	s14, s15
+ 381 000c F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 382 0010 01DD     		ble	.L32
+  87:moudels/algorithm/controller.c ****     {
+  88:moudels/algorithm/controller.c ****         pid->Output = pid->MaxOut;
+ 383              		.loc 1 88 9 is_stmt 1 view .LVU119
+ 384              		.loc 1 88 21 is_stmt 0 view .LVU120
+ 385 0012 C0ED147A 		vstr.32	s15, [r0, #80]
+ 386              	.L32:
+  89:moudels/algorithm/controller.c ****     }
+  90:moudels/algorithm/controller.c ****     if (pid->Output < -(pid->MaxOut))
+ 387              		.loc 1 90 5 is_stmt 1 view .LVU121
+ 388              		.loc 1 90 12 is_stmt 0 view .LVU122
+ 389 0016 90ED147A 		vldr.32	s14, [r0, #80]
+ 390              		.loc 1 90 23 view .LVU123
+ 391 001a F1EE677A 		vneg.f32	s15, s15
+ 392              		.loc 1 90 8 view .LVU124
+ 393 001e B4EEE77A 		vcmpe.f32	s14, s15
+ 394 0022 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 395 0026 01D5     		bpl	.L31
+  91:moudels/algorithm/controller.c ****     {
+  92:moudels/algorithm/controller.c ****         pid->Output = -(pid->MaxOut);
+ 396              		.loc 1 92 9 is_stmt 1 view .LVU125
+ 397              		.loc 1 92 21 is_stmt 0 view .LVU126
+ 398 0028 C0ED147A 		vstr.32	s15, [r0, #80]
+ 399              	.L31:
+  93:moudels/algorithm/controller.c ****     }
+  94:moudels/algorithm/controller.c **** }
+ 400              		.loc 1 94 1 view .LVU127
+ 401 002c 7047     		bx	lr
+ 402              		.cfi_endproc
+ 403              	.LFE140:
+ 405              		.section	.text.f_PID_ErrorHandle,"ax",%progbits
+ 406              		.align	1
+ 407              		.syntax unified
+ 408              		.thumb
+ 409              		.thumb_func
+ 411              	f_PID_ErrorHandle:
+ 412              	.LVL7:
+ 413              	.LFB141:
+  95:moudels/algorithm/controller.c **** 
+  96:moudels/algorithm/controller.c **** // 电机堵转检测
+  97:moudels/algorithm/controller.c **** static void f_PID_ErrorHandle(PIDInstance *pid)
+  98:moudels/algorithm/controller.c **** {
+ 414              		.loc 1 98 1 is_stmt 1 view -0
+ 415              		.cfi_startproc
+ 416              		@ args = 0, pretend = 0, frame = 0
+ 417              		@ frame_needed = 0, uses_anonymous_args = 0
+ 418              		@ link register save eliminated.
+  99:moudels/algorithm/controller.c ****     /*Motor Blocked Handle*/
+ 100:moudels/algorithm/controller.c ****     if (fabsf(pid->Output) < pid->MaxOut * 0.001f || fabsf(pid->Ref) < 0.0001f)
+ 419              		.loc 1 100 5 view .LVU129
+ 420              		.loc 1 100 18 is_stmt 0 view .LVU130
+ 421 0000 90ED147A 		vldr.32	s14, [r0, #80]
+ 422              		.loc 1 100 9 view .LVU131
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 10
+
+
+ 423 0004 B0EEC77A 		vabs.f32	s14, s14
+ 424              		.loc 1 100 33 view .LVU132
+ 425 0008 D0ED037A 		vldr.32	s15, [r0, #12]
+ 426              		.loc 1 100 42 view .LVU133
+ 427 000c DFED1D6A 		vldr.32	s13, .L45
+ 428 0010 67EEA67A 		vmul.f32	s15, s15, s13
+ 429              		.loc 1 100 8 view .LVU134
+ 430 0014 B4EEE77A 		vcmpe.f32	s14, s15
+ 431 0018 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 432 001c 2BD4     		bmi	.L38
+ 433              		.loc 1 100 63 discriminator 1 view .LVU135
+ 434 001e D0ED177A 		vldr.32	s15, [r0, #92]
+ 435              		.loc 1 100 54 discriminator 1 view .LVU136
+ 436 0022 B0EEE77A 		vabs.f32	s14, s15
+ 437              		.loc 1 100 51 discriminator 1 view .LVU137
+ 438 0026 DFED186A 		vldr.32	s13, .L45+4
+ 439 002a B4EEE67A 		vcmpe.f32	s14, s13
+ 440 002e F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 441 0032 20D4     		bmi	.L38
+ 101:moudels/algorithm/controller.c ****         return;
+ 102:moudels/algorithm/controller.c **** 
+ 103:moudels/algorithm/controller.c ****     if ((fabsf(pid->Ref - pid->Measure) / fabsf(pid->Ref)) > 0.95f)
+ 442              		.loc 1 103 5 is_stmt 1 view .LVU138
+ 443              		.loc 1 103 30 is_stmt 0 view .LVU139
+ 444 0034 D0ED0B6A 		vldr.32	s13, [r0, #44]
+ 445              		.loc 1 103 25 view .LVU140
+ 446 0038 77EEE67A 		vsub.f32	s15, s15, s13
+ 447              		.loc 1 103 10 view .LVU141
+ 448 003c F0EEE77A 		vabs.f32	s15, s15
+ 449              		.loc 1 103 41 view .LVU142
+ 450 0040 C7EE876A 		vdiv.f32	s13, s15, s14
+ 451              		.loc 1 103 8 view .LVU143
+ 452 0044 DFED117A 		vldr.32	s15, .L45+8
+ 453 0048 F4EEE76A 		vcmpe.f32	s13, s15
+ 454 004c F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 455 0050 12DD     		ble	.L44
+ 104:moudels/algorithm/controller.c ****     {
+ 105:moudels/algorithm/controller.c ****         // Motor blocked counting
+ 106:moudels/algorithm/controller.c ****         pid->ERRORHandler.ERRORCount++;
+ 456              		.loc 1 106 9 is_stmt 1 view .LVU144
+ 457              		.loc 1 106 26 is_stmt 0 view .LVU145
+ 458 0052 836E     		ldr	r3, [r0, #104]
+ 459 0054 C26E     		ldr	r2, [r0, #108]
+ 460              		.loc 1 106 37 view .LVU146
+ 461 0056 0133     		adds	r3, r3, #1
+ 462 0058 42F10002 		adc	r2, r2, #0
+ 463 005c 8366     		str	r3, [r0, #104]
+ 464 005e C266     		str	r2, [r0, #108]
+ 465              	.L42:
+ 107:moudels/algorithm/controller.c ****     }
+ 108:moudels/algorithm/controller.c ****     else
+ 109:moudels/algorithm/controller.c ****     {
+ 110:moudels/algorithm/controller.c ****         pid->ERRORHandler.ERRORCount = 0;
+ 111:moudels/algorithm/controller.c ****     }
+ 112:moudels/algorithm/controller.c **** 
+ 113:moudels/algorithm/controller.c ****     if (pid->ERRORHandler.ERRORCount > 500)
+ 466              		.loc 1 113 5 is_stmt 1 view .LVU147
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 11
+
+
+ 467              		.loc 1 113 26 is_stmt 0 view .LVU148
+ 468 0060 816E     		ldr	r1, [r0, #104]
+ 469 0062 C36E     		ldr	r3, [r0, #108]
+ 470              		.loc 1 113 8 view .LVU149
+ 471 0064 40F2F512 		movw	r2, #501
+ 472 0068 9142     		cmp	r1, r2
+ 473 006a 73F10003 		sbcs	r3, r3, #0
+ 474 006e 02D3     		bcc	.L38
+ 114:moudels/algorithm/controller.c ****     {
+ 115:moudels/algorithm/controller.c ****         // Motor blocked over 1000times
+ 116:moudels/algorithm/controller.c ****         pid->ERRORHandler.ERRORType = PID_MOTOR_BLOCKED_ERROR;
+ 475              		.loc 1 116 9 is_stmt 1 view .LVU150
+ 476              		.loc 1 116 37 is_stmt 0 view .LVU151
+ 477 0070 0123     		movs	r3, #1
+ 478 0072 80F87030 		strb	r3, [r0, #112]
+ 479              	.L38:
+ 117:moudels/algorithm/controller.c ****     }
+ 118:moudels/algorithm/controller.c **** }
+ 480              		.loc 1 118 1 view .LVU152
+ 481 0076 7047     		bx	lr
+ 482              	.L44:
+ 110:moudels/algorithm/controller.c ****     }
+ 483              		.loc 1 110 9 is_stmt 1 view .LVU153
+ 110:moudels/algorithm/controller.c ****     }
+ 484              		.loc 1 110 38 is_stmt 0 view .LVU154
+ 485 0078 0022     		movs	r2, #0
+ 486 007a 0023     		movs	r3, #0
+ 487 007c C0E91A23 		strd	r2, [r0, #104]
+ 488 0080 EEE7     		b	.L42
+ 489              	.L46:
+ 490 0082 00BF     		.align	2
+ 491              	.L45:
+ 492 0084 6F12833A 		.word	981668463
+ 493 0088 17B7D138 		.word	953267991
+ 494 008c 3333733F 		.word	1064514355
+ 495              		.cfi_endproc
+ 496              	.LFE141:
+ 498              		.section	.text.PIDInit,"ax",%progbits
+ 499              		.align	1
+ 500              		.global	PIDInit
+ 501              		.syntax unified
+ 502              		.thumb
+ 503              		.thumb_func
+ 505              	PIDInit:
+ 506              	.LVL8:
+ 507              	.LFB142:
+ 119:moudels/algorithm/controller.c **** 
+ 120:moudels/algorithm/controller.c **** /* ---------------------------下面是PID的外部算法接口--------------------------- */
+ 121:moudels/algorithm/controller.c **** 
+ 122:moudels/algorithm/controller.c **** /**
+ 123:moudels/algorithm/controller.c ****  * @brief 初始化PID,设置参数和启用的优化环节,将其他数据置零
+ 124:moudels/algorithm/controller.c ****  *
+ 125:moudels/algorithm/controller.c ****  * @param pid    PID实例
+ 126:moudels/algorithm/controller.c ****  * @param config PID初始化设置
+ 127:moudels/algorithm/controller.c ****  */
+ 128:moudels/algorithm/controller.c **** void PIDInit(PIDInstance *pid, PID_Init_Config_s *config)
+ 129:moudels/algorithm/controller.c **** {
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 12
+
+
+ 508              		.loc 1 129 1 is_stmt 1 view -0
+ 509              		.cfi_startproc
+ 510              		@ args = 0, pretend = 0, frame = 0
+ 511              		@ frame_needed = 0, uses_anonymous_args = 0
+ 512              		.loc 1 129 1 is_stmt 0 view .LVU156
+ 513 0000 38B5     		push	{r3, r4, r5, lr}
+ 514              		.cfi_def_cfa_offset 16
+ 515              		.cfi_offset 3, -16
+ 516              		.cfi_offset 4, -12
+ 517              		.cfi_offset 5, -8
+ 518              		.cfi_offset 14, -4
+ 519 0002 0546     		mov	r5, r0
+ 520 0004 0C46     		mov	r4, r1
+ 130:moudels/algorithm/controller.c ****     // config的数据和pid的部分数据是连续且相同的的,所以可以直接用memcpy
+ 131:moudels/algorithm/controller.c ****     // @todo: 不建议这样做,可扩展性差,不知道的开发者可能会误以为pid和confi
+ 132:moudels/algorithm/controller.c ****     // 后续修改为逐个赋值
+ 133:moudels/algorithm/controller.c ****     memset(pid, 0, sizeof(PIDInstance));
+ 521              		.loc 1 133 5 is_stmt 1 view .LVU157
+ 522 0006 7822     		movs	r2, #120
+ 523 0008 0021     		movs	r1, #0
+ 524              	.LVL9:
+ 525              		.loc 1 133 5 is_stmt 0 view .LVU158
+ 526 000a FFF7FEFF 		bl	memset
+ 527              	.LVL10:
+ 134:moudels/algorithm/controller.c ****     // utilize the quality of struct that its memeory is continuous
+ 135:moudels/algorithm/controller.c ****     memcpy(pid, config, sizeof(PID_Init_Config_s));
+ 528              		.loc 1 135 5 is_stmt 1 view .LVU159
+ 529 000e 2346     		mov	r3, r4
+ 530 0010 2A46     		mov	r2, r5
+ 531 0012 2034     		adds	r4, r4, #32
+ 532              	.LVL11:
+ 533              	.L48:
+ 534              		.loc 1 135 5 is_stmt 0 view .LVU160
+ 535 0014 D3F800E0 		ldr	lr, [r3]	@ unaligned
+ 536 0018 D3F804C0 		ldr	ip, [r3, #4]	@ unaligned
+ 537 001c 9868     		ldr	r0, [r3, #8]	@ unaligned
+ 538 001e D968     		ldr	r1, [r3, #12]	@ unaligned
+ 539 0020 C2F800E0 		str	lr, [r2]	@ unaligned
+ 540 0024 C2F804C0 		str	ip, [r2, #4]	@ unaligned
+ 541 0028 9060     		str	r0, [r2, #8]	@ unaligned
+ 542 002a D160     		str	r1, [r2, #12]	@ unaligned
+ 543 002c 1033     		adds	r3, r3, #16
+ 544 002e 1032     		adds	r2, r2, #16
+ 545 0030 A342     		cmp	r3, r4
+ 546 0032 EFD1     		bne	.L48
+ 547 0034 1868     		ldr	r0, [r3]	@ unaligned
+ 548 0036 5968     		ldr	r1, [r3, #4]	@ unaligned
+ 549 0038 9B68     		ldr	r3, [r3, #8]	@ unaligned
+ 550 003a 1060     		str	r0, [r2]	@ unaligned
+ 551 003c 5160     		str	r1, [r2, #4]	@ unaligned
+ 552 003e 9360     		str	r3, [r2, #8]	@ unaligned
+ 136:moudels/algorithm/controller.c ****     // set rest of memory to 0
+ 137:moudels/algorithm/controller.c ****     DWT_GetDeltaT(&pid->DWT_CNT);
+ 553              		.loc 1 137 5 is_stmt 1 view .LVU161
+ 554 0040 05F16000 		add	r0, r5, #96
+ 555 0044 FFF7FEFF 		bl	DWT_GetDeltaT
+ 556              	.LVL12:
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 13
+
+
+ 138:moudels/algorithm/controller.c **** }
+ 557              		.loc 1 138 1 is_stmt 0 view .LVU162
+ 558 0048 38BD     		pop	{r3, r4, r5, pc}
+ 559              		.loc 1 138 1 view .LVU163
+ 560              		.cfi_endproc
+ 561              	.LFE142:
+ 563              		.section	.text.PIDCalculate,"ax",%progbits
+ 564              		.align	1
+ 565              		.global	PIDCalculate
+ 566              		.syntax unified
+ 567              		.thumb
+ 568              		.thumb_func
+ 570              	PIDCalculate:
+ 571              	.LVL13:
+ 572              	.LFB143:
+ 139:moudels/algorithm/controller.c **** 
+ 140:moudels/algorithm/controller.c **** /**
+ 141:moudels/algorithm/controller.c ****  * @brief          PID计算
+ 142:moudels/algorithm/controller.c ****  * @param[in]      PID结构体
+ 143:moudels/algorithm/controller.c ****  * @param[in]      测量值
+ 144:moudels/algorithm/controller.c ****  * @param[in]      期望值
+ 145:moudels/algorithm/controller.c ****  * @retval         返回空
+ 146:moudels/algorithm/controller.c ****  */
+ 147:moudels/algorithm/controller.c **** float PIDCalculate(PIDInstance *pid, float measure, float ref)
+ 148:moudels/algorithm/controller.c **** {
+ 573              		.loc 1 148 1 is_stmt 1 view -0
+ 574              		.cfi_startproc
+ 575              		@ args = 0, pretend = 0, frame = 0
+ 576              		@ frame_needed = 0, uses_anonymous_args = 0
+ 577              		.loc 1 148 1 is_stmt 0 view .LVU165
+ 578 0000 10B5     		push	{r4, lr}
+ 579              		.cfi_def_cfa_offset 8
+ 580              		.cfi_offset 4, -8
+ 581              		.cfi_offset 14, -4
+ 582 0002 2DED028B 		vpush.64	{d8}
+ 583              		.cfi_def_cfa_offset 16
+ 584              		.cfi_offset 80, -16
+ 585              		.cfi_offset 81, -12
+ 586 0006 0446     		mov	r4, r0
+ 587 0008 F0EE408A 		vmov.f32	s17, s0
+ 588 000c B0EE608A 		vmov.f32	s16, s1
+ 149:moudels/algorithm/controller.c ****     // 堵转检测
+ 150:moudels/algorithm/controller.c ****     if (pid->Improve & PID_ErrorHandle)
+ 589              		.loc 1 150 5 is_stmt 1 view .LVU166
+ 590              		.loc 1 150 9 is_stmt 0 view .LVU167
+ 591 0010 90F91430 		ldrsb	r3, [r0, #20]
+ 592              		.loc 1 150 8 view .LVU168
+ 593 0014 002B     		cmp	r3, #0
+ 594 0016 71DB     		blt	.L66
+ 595              	.LVL14:
+ 596              	.L51:
+ 151:moudels/algorithm/controller.c ****         f_PID_ErrorHandle(pid);
+ 152:moudels/algorithm/controller.c **** 
+ 153:moudels/algorithm/controller.c ****     pid->dt = DWT_GetDeltaT(&pid->DWT_CNT); // 获取两次pid计算的时间间隔,用于积分和
+ 597              		.loc 1 153 5 is_stmt 1 view .LVU169
+ 598              		.loc 1 153 15 is_stmt 0 view .LVU170
+ 599 0018 04F16000 		add	r0, r4, #96
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 14
+
+
+ 600 001c FFF7FEFF 		bl	DWT_GetDeltaT
+ 601              	.LVL15:
+ 602              		.loc 1 153 13 discriminator 1 view .LVU171
+ 603 0020 84ED190A 		vstr.32	s0, [r4, #100]
+ 154:moudels/algorithm/controller.c **** 
+ 155:moudels/algorithm/controller.c ****     // 保存上次的测量值和误差,计算当前error
+ 156:moudels/algorithm/controller.c ****     pid->Measure = measure;
+ 604              		.loc 1 156 5 is_stmt 1 view .LVU172
+ 605              		.loc 1 156 18 is_stmt 0 view .LVU173
+ 606 0024 C4ED0B8A 		vstr.32	s17, [r4, #44]
+ 157:moudels/algorithm/controller.c ****     pid->Ref = ref;
+ 607              		.loc 1 157 5 is_stmt 1 view .LVU174
+ 608              		.loc 1 157 14 is_stmt 0 view .LVU175
+ 609 0028 84ED178A 		vstr.32	s16, [r4, #92]
+ 158:moudels/algorithm/controller.c ****     pid->Err = pid->Ref - pid->Measure;   
+ 610              		.loc 1 158 5 is_stmt 1 view .LVU176
+ 611              		.loc 1 158 25 is_stmt 0 view .LVU177
+ 612 002c 78EE680A 		vsub.f32	s1, s16, s17
+ 613              		.loc 1 158 14 view .LVU178
+ 614 0030 C4ED0D0A 		vstr.32	s1, [r4, #52]
+ 159:moudels/algorithm/controller.c **** 
+ 160:moudels/algorithm/controller.c ****     // 如果在死区外,则计算PID
+ 161:moudels/algorithm/controller.c ****     if (abs(pid->Err) > pid->DeadBand)
+ 615              		.loc 1 161 5 is_stmt 1 view .LVU179
+ 616              		.loc 1 161 9 is_stmt 0 view .LVU180
+ 617 0034 F5EEC00A 		vcmpe.f32	s1, #0
+ 618 0038 F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 619 003c 61DD     		ble	.L67
+ 620              		.loc 1 161 9 discriminator 1 view .LVU181
+ 621 003e F0EE607A 		vmov.f32	s15, s1
+ 622              	.L52:
+ 623              		.loc 1 161 28 discriminator 4 view .LVU182
+ 624 0042 94ED047A 		vldr.32	s14, [r4, #16]
+ 625              		.loc 1 161 8 discriminator 4 view .LVU183
+ 626 0046 B4EEE77A 		vcmpe.f32	s14, s15
+ 627 004a F1EE10FA 		vmrs	APSR_nzcv, FPSCR
+ 628 004e 73D5     		bpl	.L64
+ 162:moudels/algorithm/controller.c ****     {
+ 163:moudels/algorithm/controller.c ****         // 基本的pid计算,使用位置式
+ 164:moudels/algorithm/controller.c ****         pid->Pout = pid->Kp * pid->Err;
+ 629              		.loc 1 164 9 is_stmt 1 view .LVU184
+ 630              		.loc 1 164 24 is_stmt 0 view .LVU185
+ 631 0050 D4ED007A 		vldr.32	s15, [r4]
+ 632              		.loc 1 164 29 view .LVU186
+ 633 0054 60EEA77A 		vmul.f32	s15, s1, s15
+ 634              		.loc 1 164 19 view .LVU187
+ 635 0058 C4ED107A 		vstr.32	s15, [r4, #64]
+ 165:moudels/algorithm/controller.c ****         pid->ITerm = pid->Ki * pid->Err * pid->dt;
+ 636              		.loc 1 165 9 is_stmt 1 view .LVU188
+ 637              		.loc 1 165 25 is_stmt 0 view .LVU189
+ 638 005c D4ED017A 		vldr.32	s15, [r4, #4]
+ 639              		.loc 1 165 30 view .LVU190
+ 640 0060 60EEA77A 		vmul.f32	s15, s1, s15
+ 641              		.loc 1 165 41 view .LVU191
+ 642 0064 60EE277A 		vmul.f32	s15, s0, s15
+ 643              		.loc 1 165 20 view .LVU192
+ 644 0068 C4ED137A 		vstr.32	s15, [r4, #76]
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 15
+
+
+ 166:moudels/algorithm/controller.c ****         pid->Dout = pid->Kd * (pid->Err - pid->Last_Err) / pid->dt;
+ 645              		.loc 1 166 9 is_stmt 1 view .LVU193
+ 646              		.loc 1 166 24 is_stmt 0 view .LVU194
+ 647 006c D4ED027A 		vldr.32	s15, [r4, #8]
+ 648              		.loc 1 166 46 view .LVU195
+ 649 0070 94ED0E7A 		vldr.32	s14, [r4, #56]
+ 650              		.loc 1 166 41 view .LVU196
+ 651 0074 70EEC70A 		vsub.f32	s1, s1, s14
+ 652              		.loc 1 166 29 view .LVU197
+ 653 0078 67EEA07A 		vmul.f32	s15, s15, s1
+ 654              		.loc 1 166 58 view .LVU198
+ 655 007c 87EE807A 		vdiv.f32	s14, s15, s0
+ 656              		.loc 1 166 19 view .LVU199
+ 657 0080 84ED127A 		vstr.32	s14, [r4, #72]
+ 167:moudels/algorithm/controller.c **** 
+ 168:moudels/algorithm/controller.c ****         // 梯形积分
+ 169:moudels/algorithm/controller.c ****         if (pid->Improve & PID_Trapezoid_Intergral)
+ 658              		.loc 1 169 9 is_stmt 1 view .LVU200
+ 659              		.loc 1 169 16 is_stmt 0 view .LVU201
+ 660 0084 237D     		ldrb	r3, [r4, #20]	@ zero_extendqisi2
+ 661              		.loc 1 169 12 view .LVU202
+ 662 0086 13F0040F 		tst	r3, #4
+ 663 008a 3DD1     		bne	.L68
+ 664              	.L55:
+ 170:moudels/algorithm/controller.c ****             f_Trapezoid_Intergral(pid);
+ 171:moudels/algorithm/controller.c ****         // 变速积分
+ 172:moudels/algorithm/controller.c ****         if (pid->Improve & PID_ChangingIntegrationRate)
+ 665              		.loc 1 172 9 is_stmt 1 view .LVU203
+ 666              		.loc 1 172 16 is_stmt 0 view .LVU204
+ 667 008c 237D     		ldrb	r3, [r4, #20]	@ zero_extendqisi2
+ 668              		.loc 1 172 12 view .LVU205
+ 669 008e 13F0200F 		tst	r3, #32
+ 670 0092 3DD1     		bne	.L69
+ 671              	.L56:
+ 173:moudels/algorithm/controller.c ****             f_Changing_Integration_Rate(pid);
+ 174:moudels/algorithm/controller.c ****         // 微分先行
+ 175:moudels/algorithm/controller.c ****         if (pid->Improve & PID_Derivative_On_Measurement)
+ 672              		.loc 1 175 9 is_stmt 1 view .LVU206
+ 673              		.loc 1 175 16 is_stmt 0 view .LVU207
+ 674 0094 237D     		ldrb	r3, [r4, #20]	@ zero_extendqisi2
+ 675              		.loc 1 175 12 view .LVU208
+ 676 0096 13F0020F 		tst	r3, #2
+ 677 009a 3DD1     		bne	.L70
+ 678              	.L57:
+ 176:moudels/algorithm/controller.c ****             f_Derivative_On_Measurement(pid);
+ 177:moudels/algorithm/controller.c ****         // 微分滤波器
+ 178:moudels/algorithm/controller.c ****         if (pid->Improve & PID_DerivativeFilter)
+ 679              		.loc 1 178 9 is_stmt 1 view .LVU209
+ 680              		.loc 1 178 16 is_stmt 0 view .LVU210
+ 681 009c 237D     		ldrb	r3, [r4, #20]	@ zero_extendqisi2
+ 682              		.loc 1 178 12 view .LVU211
+ 683 009e 13F0400F 		tst	r3, #64
+ 684 00a2 3DD1     		bne	.L71
+ 685              	.L58:
+ 179:moudels/algorithm/controller.c ****             f_Derivative_Filter(pid);
+ 180:moudels/algorithm/controller.c ****         // 积分限幅
+ 181:moudels/algorithm/controller.c ****         if (pid->Improve & PID_Integral_Limit)
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 16
+
+
+ 686              		.loc 1 181 9 is_stmt 1 view .LVU212
+ 687              		.loc 1 181 16 is_stmt 0 view .LVU213
+ 688 00a4 237D     		ldrb	r3, [r4, #20]	@ zero_extendqisi2
+ 689              		.loc 1 181 12 view .LVU214
+ 690 00a6 13F0010F 		tst	r3, #1
+ 691 00aa 3DD1     		bne	.L72
+ 692              	.L59:
+ 182:moudels/algorithm/controller.c ****             f_Integral_Limit(pid);
+ 183:moudels/algorithm/controller.c **** 
+ 184:moudels/algorithm/controller.c ****         pid->Iout += pid->ITerm;                         // 累加积分
+ 693              		.loc 1 184 9 is_stmt 1 view .LVU215
+ 694              		.loc 1 184 12 is_stmt 0 view .LVU216
+ 695 00ac D4ED117A 		vldr.32	s15, [r4, #68]
+ 696              		.loc 1 184 25 view .LVU217
+ 697 00b0 94ED137A 		vldr.32	s14, [r4, #76]
+ 698              		.loc 1 184 19 view .LVU218
+ 699 00b4 77EE877A 		vadd.f32	s15, s15, s14
+ 700 00b8 C4ED117A 		vstr.32	s15, [r4, #68]
+ 185:moudels/algorithm/controller.c ****         pid->Output = pid->Pout + pid->Iout + pid->Dout; // 计算输出
+ 701              		.loc 1 185 9 is_stmt 1 view .LVU219
+ 702              		.loc 1 185 26 is_stmt 0 view .LVU220
+ 703 00bc 94ED107A 		vldr.32	s14, [r4, #64]
+ 704              		.loc 1 185 33 view .LVU221
+ 705 00c0 77EE877A 		vadd.f32	s15, s15, s14
+ 706              		.loc 1 185 50 view .LVU222
+ 707 00c4 94ED127A 		vldr.32	s14, [r4, #72]
+ 708              		.loc 1 185 45 view .LVU223
+ 709 00c8 77EE877A 		vadd.f32	s15, s15, s14
+ 710              		.loc 1 185 21 view .LVU224
+ 711 00cc C4ED147A 		vstr.32	s15, [r4, #80]
+ 186:moudels/algorithm/controller.c **** 
+ 187:moudels/algorithm/controller.c ****         // 输出滤波
+ 188:moudels/algorithm/controller.c ****         if (pid->Improve & PID_OutputFilter)
+ 712              		.loc 1 188 9 is_stmt 1 view .LVU225
+ 713              		.loc 1 188 16 is_stmt 0 view .LVU226
+ 714 00d0 237D     		ldrb	r3, [r4, #20]	@ zero_extendqisi2
+ 715              		.loc 1 188 12 view .LVU227
+ 716 00d2 13F0100F 		tst	r3, #16
+ 717 00d6 2BD1     		bne	.L73
+ 718              	.L60:
+ 189:moudels/algorithm/controller.c ****             f_Output_Filter(pid);
+ 190:moudels/algorithm/controller.c **** 
+ 191:moudels/algorithm/controller.c ****         // 输出限幅
+ 192:moudels/algorithm/controller.c ****         f_Output_Limit(pid);
+ 719              		.loc 1 192 9 is_stmt 1 view .LVU228
+ 720 00d8 2046     		mov	r0, r4
+ 721 00da FFF7FEFF 		bl	f_Output_Limit
+ 722              	.LVL16:
+ 723              	.L61:
+ 193:moudels/algorithm/controller.c ****     }
+ 194:moudels/algorithm/controller.c ****     else // 进入死区, 则清空积分和输出
+ 195:moudels/algorithm/controller.c ****     {
+ 196:moudels/algorithm/controller.c ****         pid->Output = 0;
+ 197:moudels/algorithm/controller.c ****         pid->ITerm = 0;
+ 198:moudels/algorithm/controller.c ****     }
+ 199:moudels/algorithm/controller.c **** 
+ 200:moudels/algorithm/controller.c ****     // 保存当前数据,用于下次计算
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 17
+
+
+ 201:moudels/algorithm/controller.c ****     pid->Last_Measure = pid->Measure;
+ 724              		.loc 1 201 5 view .LVU229
+ 725              		.loc 1 201 28 is_stmt 0 view .LVU230
+ 726 00de E36A     		ldr	r3, [r4, #44]	@ float
+ 727              		.loc 1 201 23 view .LVU231
+ 728 00e0 2363     		str	r3, [r4, #48]	@ float
+ 202:moudels/algorithm/controller.c ****     pid->Last_Output = pid->Output;
+ 729              		.loc 1 202 5 is_stmt 1 view .LVU232
+ 730              		.loc 1 202 27 is_stmt 0 view .LVU233
+ 731 00e2 94ED140A 		vldr.32	s0, [r4, #80]
+ 732              		.loc 1 202 22 view .LVU234
+ 733 00e6 84ED150A 		vstr.32	s0, [r4, #84]
+ 203:moudels/algorithm/controller.c ****     pid->Last_Dout = pid->Dout;
+ 734              		.loc 1 203 5 is_stmt 1 view .LVU235
+ 735              		.loc 1 203 25 is_stmt 0 view .LVU236
+ 736 00ea A36C     		ldr	r3, [r4, #72]	@ float
+ 737              		.loc 1 203 20 view .LVU237
+ 738 00ec A365     		str	r3, [r4, #88]	@ float
+ 204:moudels/algorithm/controller.c ****     pid->Last_Err = pid->Err;
+ 739              		.loc 1 204 5 is_stmt 1 view .LVU238
+ 740              		.loc 1 204 24 is_stmt 0 view .LVU239
+ 741 00ee 636B     		ldr	r3, [r4, #52]	@ float
+ 742              		.loc 1 204 19 view .LVU240
+ 743 00f0 A363     		str	r3, [r4, #56]	@ float
+ 205:moudels/algorithm/controller.c ****     pid->Last_ITerm = pid->ITerm;
+ 744              		.loc 1 205 5 is_stmt 1 view .LVU241
+ 745              		.loc 1 205 26 is_stmt 0 view .LVU242
+ 746 00f2 E36C     		ldr	r3, [r4, #76]	@ float
+ 747              		.loc 1 205 21 view .LVU243
+ 748 00f4 E363     		str	r3, [r4, #60]	@ float
+ 206:moudels/algorithm/controller.c **** 
+ 207:moudels/algorithm/controller.c ****     return pid->Output;
+ 749              		.loc 1 207 5 is_stmt 1 view .LVU244
+ 208:moudels/algorithm/controller.c **** }...
+ 750              		.loc 1 208 1 is_stmt 0 view .LVU245
+ 751 00f6 BDEC028B 		vldm	sp!, {d8}
+ 752              		.cfi_remember_state
+ 753              		.cfi_restore 80
+ 754              		.cfi_restore 81
+ 755              		.cfi_def_cfa_offset 8
+ 756              	.LVL17:
+ 757              		.loc 1 208 1 view .LVU246
+ 758 00fa 10BD     		pop	{r4, pc}
+ 759              	.LVL18:
+ 760              	.L66:
+ 761              		.cfi_restore_state
+ 151:moudels/algorithm/controller.c ****         f_PID_ErrorHandle(pid);
+ 762              		.loc 1 151 9 is_stmt 1 view .LVU247
+ 763 00fc FFF7FEFF 		bl	f_PID_ErrorHandle
+ 764              	.LVL19:
+ 151:moudels/algorithm/controller.c ****         f_PID_ErrorHandle(pid);
+ 765              		.loc 1 151 9 is_stmt 0 view .LVU248
+ 766 0100 8AE7     		b	.L51
+ 767              	.L67:
+ 161:moudels/algorithm/controller.c ****     if (abs(pid->Err) > pid->DeadBand)
+ 768              		.loc 1 161 9 discriminator 2 view .LVU249
+ 769 0102 F1EE607A 		vneg.f32	s15, s1
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 18
+
+
+ 770 0106 9CE7     		b	.L52
+ 771              	.L68:
+ 170:moudels/algorithm/controller.c ****             f_Trapezoid_Intergral(pid);
+ 772              		.loc 1 170 13 is_stmt 1 view .LVU250
+ 773 0108 2046     		mov	r0, r4
+ 774 010a FFF7FEFF 		bl	f_Trapezoid_Intergral
+ 775              	.LVL20:
+ 776 010e BDE7     		b	.L55
+ 777              	.L69:
+ 173:moudels/algorithm/controller.c ****             f_Changing_Integration_Rate(pid);
+ 778              		.loc 1 173 13 view .LVU251
+ 779 0110 2046     		mov	r0, r4
+ 780 0112 FFF7FEFF 		bl	f_Changing_Integration_Rate
+ 781              	.LVL21:
+ 782 0116 BDE7     		b	.L56
+ 783              	.L70:
+ 176:moudels/algorithm/controller.c ****             f_Derivative_On_Measurement(pid);
+ 784              		.loc 1 176 13 view .LVU252
+ 785 0118 2046     		mov	r0, r4
+ 786 011a FFF7FEFF 		bl	f_Derivative_On_Measurement
+ 787              	.LVL22:
+ 788 011e BDE7     		b	.L57
+ 789              	.L71:
+ 179:moudels/algorithm/controller.c ****             f_Derivative_Filter(pid);
+ 790              		.loc 1 179 13 view .LVU253
+ 791 0120 2046     		mov	r0, r4
+ 792 0122 FFF7FEFF 		bl	f_Derivative_Filter
+ 793              	.LVL23:
+ 794 0126 BDE7     		b	.L58
+ 795              	.L72:
+ 182:moudels/algorithm/controller.c ****             f_Integral_Limit(pid);
+ 796              		.loc 1 182 13 view .LVU254
+ 797 0128 2046     		mov	r0, r4
+ 798 012a FFF7FEFF 		bl	f_Integral_Limit
+ 799              	.LVL24:
+ 800 012e BDE7     		b	.L59
+ 801              	.L73:
+ 189:moudels/algorithm/controller.c ****             f_Output_Filter(pid);
+ 802              		.loc 1 189 13 view .LVU255
+ 803 0130 2046     		mov	r0, r4
+ 804 0132 FFF7FEFF 		bl	f_Output_Filter
+ 805              	.LVL25:
+ 806 0136 CFE7     		b	.L60
+ 807              	.L64:
+ 196:moudels/algorithm/controller.c ****         pid->Output = 0;
+ 808              		.loc 1 196 9 view .LVU256
+ 196:moudels/algorithm/controller.c ****         pid->Output = 0;
+ 809              		.loc 1 196 21 is_stmt 0 view .LVU257
+ 810 0138 0023     		movs	r3, #0
+ 811 013a 2365     		str	r3, [r4, #80]	@ float
+ 197:moudels/algorithm/controller.c ****         pid->ITerm = 0;
+ 812              		.loc 1 197 9 is_stmt 1 view .LVU258
+ 197:moudels/algorithm/controller.c ****         pid->ITerm = 0;
+ 813              		.loc 1 197 20 is_stmt 0 view .LVU259
+ 814 013c E364     		str	r3, [r4, #76]	@ float
+ 815 013e CEE7     		b	.L61
+ 816              		.cfi_endproc
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 19
+
+
+ 817              	.LFE143:
+ 819              		.section	.bss.temp_Output.0,"aw",%nobits
+ 820              		.align	2
+ 823              	temp_Output.0:
+ 824 0000 00000000 		.space	4
+ 825              		.section	.bss.temp_Iout.1,"aw",%nobits
+ 826              		.align	2
+ 829              	temp_Iout.1:
+ 830 0000 00000000 		.space	4
+ 831              		.text
+ 832              	.Letext0:
+ 833              		.file 2 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 834              		.file 3 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 835              		.file 4 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 836              		.file 5 "moudels/algorithm/controller.h"
+ 837              		.file 6 "bsp/dwt/bsp_dwt.h"
+ 838              		.file 7 "C:/Users/WS-XIAOYA/AppData/Roaming/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-de
+ 839              		.file 8 "<built-in>"
+ARM GAS  C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s 			page 20
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 controller.c
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:21     .text.f_Trapezoid_Intergral:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:26     .text.f_Trapezoid_Intergral:00000000 f_Trapezoid_Intergral
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:60     .text.f_Changing_Integration_Rate:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:65     .text.f_Changing_Integration_Rate:00000000 f_Changing_Integration_Rate
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:134    .text.f_Integral_Limit:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:139    .text.f_Integral_Limit:00000000 f_Integral_Limit
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:235    .text.f_Integral_Limit:0000008c $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:829    .bss.temp_Iout.1:00000000 temp_Iout.1
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:823    .bss.temp_Output.0:00000000 temp_Output.0
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:241    .text.f_Derivative_On_Measurement:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:246    .text.f_Derivative_On_Measurement:00000000 f_Derivative_On_Measurement
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:277    .text.f_Derivative_Filter:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:282    .text.f_Derivative_Filter:00000000 f_Derivative_Filter
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:319    .text.f_Output_Filter:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:324    .text.f_Output_Filter:00000000 f_Output_Filter
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:361    .text.f_Output_Limit:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:366    .text.f_Output_Limit:00000000 f_Output_Limit
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:406    .text.f_PID_ErrorHandle:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:411    .text.f_PID_ErrorHandle:00000000 f_PID_ErrorHandle
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:492    .text.f_PID_ErrorHandle:00000084 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:499    .text.PIDInit:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:505    .text.PIDInit:00000000 PIDInit
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:564    .text.PIDCalculate:00000000 $t
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:570    .text.PIDCalculate:00000000 PIDCalculate
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:820    .bss.temp_Output.0:00000000 $d
+C:\Users\WS-XIA~1\AppData\Local\Temp\ccmYIcCh.s:826    .bss.temp_Iout.1:00000000 $d
+
+UNDEFINED SYMBOLS
+memset
+DWT_GetDeltaT
